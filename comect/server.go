@@ -26,13 +26,13 @@ type Server struct {
 	writeTimeout time.Duration   // 写超时
 	maxConnNum   int             // 限制最大连接数
 
-	mu        sync.RWMutex // 锁
-	clients   ClientSet    // 客户端集
-	clientsMu sync.RWMutex // 客户端锁
+	mu      sync.RWMutex // 锁
+	conns   ConnSet      // 客户端集
+	connsMu sync.RWMutex // 客户端锁
 
-	closeSig  chan bool      // 服务结束信号
-	lnwg      sync.WaitGroup // listener的等待组
-	clientswg sync.WaitGroup // clients的等待组
+	closeSig chan bool      // 服务结束信号
+	wgLn     sync.WaitGroup // listener的等待组
+	wgConns  sync.WaitGroup // clients的等待组
 
 	Plugins PluginContainer // 插件槽
 }
@@ -65,8 +65,8 @@ func (s *Server) init() {
 		s.maxConnNum = DEFAULT_MAX_CONNNUM
 	}
 
-	if s.clients == nil {
-		s.clients = NewClientSet()
+	if s.conns == nil {
+		s.conns = NewConnSet()
 	}
 
 	if s.Plugins == nil {
@@ -106,12 +106,27 @@ func (s *Server) Run() {
 		log.Fatal(err)
 	}
 	s.ln = ln
-	go s.serveListener(ln)
+	go s.serveListener()
+
+	// 结束服务
+	<-s.closeSig
+
+	//关闭listener
+	s.closeListener()
+	// 处理ConnsClose
+	s.connsMu.Lock()
+	for conn := range s.conns {
+		s.Plugins.HandleCloseConn(conn)
+	}
+	s.connsMu.Unlock()
+	s.wgConns.Wait()
+	log.Infof("wait all agent onclose done")
+
 }
 
-func (s *Server) serveListener(ln net.Listener) error {
-	s.lnwg.Add(1)
-	defer s.lnwg.Done()
+func (s *Server) serveListener() {
+	s.wgLn.Add(1)
+	defer s.wgLn.Done()
 
 	var tempDelay time.Duration
 	for {
@@ -126,11 +141,12 @@ func (s *Server) serveListener(ln net.Listener) error {
 				if max := 1 * time.Second; tempDelay > max {
 					tempDelay = max
 				}
-				log.Infof("server accept error: %v\nretrying in %s", err, tempDelay)
+				log.Warnf("server accept error: %v\nretrying in %s", err, tempDelay)
 				time.Sleep(tempDelay)
 				continue
 			}
-			return err
+			log.Fatalf("server listener error: %s", err)
+			return
 		}
 		tempDelay = 0
 
@@ -140,36 +156,43 @@ func (s *Server) serveListener(ln net.Listener) error {
 
 // 处理连接
 func (s *Server) handleConn(conn net.Conn) {
-	s.clientsMu.Lock()
+	s.connsMu.Lock()
 	// 如果连接数量超过限制,直接返回
 	// 理论上在auth时候就要避免
-	if len(s.clients) >= s.maxConnNum {
-		s.clientsMu.Unlock()
+	if count := len(s.conns); count >= s.maxConnNum {
+		s.connsMu.Unlock()
 		conn.Close()
-		log.Warnf("too many connections: %d", len(s.clients))
+		log.Warnf("too many connections: %d", count)
 		return
 	}
 
 	netConn := NewNetConn(conn, s.readTimeout, s.writeTimeout)
-	client := NewClient(s.Plugins.HandleConnAccept(netConn))
 
-	s.clients.Add(client)
-	s.clientsMu.Unlock()
-	s.clientswg.Add(1)
-	log.Debug("new client: %s", client.RemoteAddr())
+	s.conns.Add(netConn)
+	s.connsMu.Unlock()
+	s.wgConns.Add(1)
+	log.Debug("new conn: %s", conn.RemoteAddr())
 
 	go func() {
-		// if gate.OnNewAgent != nil {
-		// 	gate.OnNewAgent(agent)
-		// }
-		// agent.Run() // 阻塞运行
-		// // cleanup
-		// conn.Close()
-		// gate.agentSetMu.Lock()
-		// gate.agentSet.Remove(agent)
-		// gate.agentSetMu.Unlock()
-		// agent.OnClose()
+		s.Plugins.HandleConnAccept(netConn) // 这里面进行Conn消息收发处理等,阻塞
+		// 阻塞条件结束
+		netConn.Close()
+		s.connsMu.Lock()
+		s.conns.Remove(netConn)
+		s.connsMu.Unlock()
 
-		// gate.wgConns.Done()
+		s.Plugins.HandleConnClosed(netConn)
+		s.wgConns.Done()
 	}()
+}
+
+func (s *Server) closeListener() {
+	s.ln.Close()
+	s.wgLn.Wait()
+}
+
+func (s *Server) ConnSet() ConnSet {
+	s.connsMu.RLock()
+	defer s.connsMu.RUnlock()
+	return s.conns.Clone()
 }
