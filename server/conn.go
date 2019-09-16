@@ -43,6 +43,8 @@ func (conn *NetConn) Read(n int) ([]byte, error) {
 	_, err := io.ReadFull(conn.Conn, buff)
 	if err != nil {
 		log.Debugf("read error: %s, addr: %s", err, conn.RemoteAddr())
+	} else {
+		buff = Plugins.HandleRead(buff)
 	}
 	return buff, err
 }
@@ -51,7 +53,7 @@ func (conn *NetConn) Write(b []byte) (int, error) {
 	if conn.writeTimeout > 0 {
 		conn.Conn.SetWriteDeadline(time.Now().Add(conn.writeTimeout))
 	}
-	n, err := conn.Conn.Write(b)
+	n, err := conn.Conn.Write(Plugins.HandleWrite(b))
 	if err != nil {
 		log.Debugf("write error: %s, addr: %s", err, conn.RemoteAddr())
 	}

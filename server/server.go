@@ -12,6 +12,9 @@ import (
 	"github.com/ipiao/meim/log"
 )
 
+// 全局插件
+var Plugins PluginContainer = &pluginContainer{}
+
 const (
 	DEFAULT_READ_TIMEOUT  = time.Minute * 15
 	DEFAULT_WRITE_TIMEOUT = time.Second * 10
@@ -34,7 +37,6 @@ type Server struct {
 	wgLn     sync.WaitGroup // listener的等待组
 	wgConns  sync.WaitGroup // clients的等待组
 
-	Plugins PluginContainer // 插件槽
 }
 
 // 新建服务
@@ -75,10 +77,6 @@ func (s *Server) init() {
 		s.conns = NewConnSet()
 	}
 
-	if s.Plugins == nil {
-		s.Plugins = &pluginContainer{}
-	}
-
 	if s.closeSig == nil {
 		s.closeSig = make(chan bool)
 	}
@@ -105,6 +103,12 @@ func (s *Server) makeListener() (ln net.Listener, err error) {
 }
 
 func (s *Server) Run() {
+
+	// check plugin
+	if err := Plugins.Check(); err != nil {
+		log.Fatal(err)
+	}
+
 	s.startShutdownListener()
 
 	ln, err := s.makeListener()
@@ -122,7 +126,7 @@ func (s *Server) Run() {
 	// 处理ConnsClose
 	s.connsMu.Lock()
 	for conn := range s.conns {
-		s.Plugins.HandleCloseConn(conn)
+		Plugins.HandleCloseConn(conn)
 	}
 	s.connsMu.Unlock()
 	s.wgConns.Wait()
@@ -181,14 +185,14 @@ func (s *Server) handleConn(conn net.Conn) {
 	log.Debug("new conn: %s", conn.RemoteAddr())
 
 	go func() {
-		s.Plugins.HandleConnAccept(netConn) // 这里面进行Conn消息收发处理等,阻塞
+		Plugins.HandleConnAccepted(netConn) // 这里面进行Conn消息收发处理等,阻塞
 		// 阻塞条件结束
 		netConn.Close()
 		s.connsMu.Lock()
 		s.conns.Remove(netConn)
 		s.connsMu.Unlock()
 
-		s.Plugins.HandleConnClosed(netConn)
+		Plugins.HandleConnClosed(netConn)
 		s.wgConns.Done()
 	}()
 }
