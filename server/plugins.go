@@ -1,4 +1,6 @@
-package comect
+package server
+
+import "errors"
 
 // 服务插件
 type Plugin interface {
@@ -21,6 +23,8 @@ type (
 // 插件槽,通过实现插件幷注册进入插件槽,对流程某些环间进行控制
 // pluginContainer implements PluginContainer interface.
 type PluginContainer interface {
+	Check() error            // check 检查插件功能的完备性,有些插件是必须实现的
+	SetPlugin(plugin Plugin) // 实现插件注册
 	ConnAcceptPlugin
 	ConnClosePlugin
 }
@@ -42,20 +46,31 @@ func (pc *pluginContainer) SetPlugin(plugin Plugin) {
 	}
 }
 
+//
 func (pc *pluginContainer) HandleConnAccept(conn Conn) {
 	if pc.doHandleConnAccept != nil {
 		pc.doHandleConnAccept(conn)
 	}
 }
 
+//
 func (pc *pluginContainer) HandleConnClosed(conn Conn) {
 	if pc.doHandleConnClosed != nil {
 		pc.doHandleConnClosed(conn)
 	}
 }
 
+// must
 func (pc *pluginContainer) HandleCloseConn(conn Conn) {
-	if pc.doHandleCloseConn != nil {
-		pc.doHandleCloseConn(conn)
+	// if pc.doHandleCloseConn != nil {
+	pc.doHandleCloseConn(conn)
+	// }
+}
+
+//
+func (pc *pluginContainer) Check() error {
+	if pc.doHandleCloseConn == nil {
+		return errors.New("ConnClosePlugin method HandleCloseConn not set")
 	}
+	return nil
 }

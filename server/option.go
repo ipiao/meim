@@ -1,4 +1,4 @@
-package comect
+package server
 
 import (
 	"crypto/tls"

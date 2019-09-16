@@ -1,4 +1,4 @@
-package comect
+package server
 
 import (
 	"fmt"
@@ -39,9 +39,15 @@ type Server struct {
 
 // 新建服务
 func NewServer(options ...OptionFn) *Server {
-	s := new(Server)
-	s.init()
+	return NewServerWithConfig(nil, options...)
+}
 
+// 新建服务
+func NewServerWithConfig(cfg *ListenerConfig, options ...OptionFn) *Server {
+	s := new(Server)
+	s.lncfg = cfg
+
+	s.init()
 	for _, op := range options {
 		op(s)
 	}
@@ -145,7 +151,8 @@ func (s *Server) serveListener() {
 				time.Sleep(tempDelay)
 				continue
 			}
-			log.Fatalf("server listener error: %s", err)
+			// 这里一般是主动断开程序造成的错误
+			log.Warnf("server listener error: %s", err)
 			return
 		}
 		tempDelay = 0

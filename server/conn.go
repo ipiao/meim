@@ -1,9 +1,11 @@
-package comect
+package server
 
 import (
 	"io"
 	"net"
 	"time"
+
+	"github.com/ipiao/meim/log"
 )
 
 // 为什么不直接用net.Conn?
@@ -39,6 +41,9 @@ func (conn *NetConn) Read(n int) ([]byte, error) {
 	}
 	buff := make([]byte, n)
 	_, err := io.ReadFull(conn.Conn, buff)
+	if err != nil {
+		log.Debugf("read error: %s, addr: %s", err, conn.RemoteAddr())
+	}
 	return buff, err
 }
 
@@ -46,7 +51,11 @@ func (conn *NetConn) Write(b []byte) (int, error) {
 	if conn.writeTimeout > 0 {
 		conn.Conn.SetWriteDeadline(time.Now().Add(conn.writeTimeout))
 	}
-	return conn.Conn.Write(b)
+	n, err := conn.Conn.Write(b)
+	if err != nil {
+		log.Debugf("write error: %s, addr: %s", err, conn.RemoteAddr())
+	}
+	return n, err
 }
 
 func IsTimeout(err error) bool {
