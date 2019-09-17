@@ -2,6 +2,13 @@ package server
 
 import "errors"
 
+// 全局插件
+var Plugins PluginContainer
+
+func init() {
+	Plugins = &pluginContainer{}
+}
+
 // 服务插件
 type Plugin interface {
 }
@@ -35,6 +42,7 @@ type PluginContainer interface {
 	WritePlugin
 }
 
+// 需要外部调用者注入实现的方法函数
 type pluginContainer struct {
 	doHandleConnAccepted func(Conn)
 	doHandleConnClosed   func(Conn)
@@ -74,9 +82,9 @@ func (pc *pluginContainer) HandleConnClosed(conn Conn) {
 
 // must
 func (pc *pluginContainer) HandleCloseConn(conn Conn) {
-	// if pc.doHandleCloseConn != nil {
-	pc.doHandleCloseConn(conn)
-	// }
+	if pc.doHandleCloseConn != nil {
+		pc.doHandleCloseConn(conn)
+	}
 }
 
 //

@@ -12,9 +12,6 @@ import (
 	"github.com/ipiao/meim/log"
 )
 
-// 全局插件
-var Plugins PluginContainer = &pluginContainer{}
-
 const (
 	DEFAULT_READ_TIMEOUT  = time.Minute * 15
 	DEFAULT_WRITE_TIMEOUT = time.Second * 10

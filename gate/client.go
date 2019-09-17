@@ -28,7 +28,7 @@ func (c *Client) Read() {
 		msg, err := protocol.ReadLimitMessage(c.conn, c.dc, 128*1024)
 		if err != nil {
 			log.Info("client read error:", err)
-			c.HandleCloseClient()
+			c.Close()
 			break
 		}
 		log.Debug(msg)
@@ -55,27 +55,7 @@ func (c *Client) Write() {
 	}
 }
 
-//发送等待队列中的消息
-func (c *Client) SendLMessages() {
-	var messages *list.List
-	c.mu.Lock()
-	if c.lmessages.Len() == 0 {
-		c.mu.Unlock()
-		return
-	}
-	messages = c.lmessages
-	c.lmessages = list.New()
-	c.mu.Unlock()
-
-	e := messages.Front()
-	for e != nil {
-		msg := e.Value.(*protocol.Message)
-		protocol.WriteMessage(c.conn, msg)
-		e = e.Next()
-	}
-}
-
-func (c *Client) HandleCloseClient() {
+func (c *Client) Close() {
 	if c.closed.CAS(false, true) {
 		c.mch <- nil
 	}
