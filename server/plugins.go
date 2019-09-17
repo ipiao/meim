@@ -19,10 +19,8 @@ type (
 		HandleCloseConn(Conn)  // 主动关闭,需要在逻辑上保证连接会断开
 	}
 
-	// HandleRead 在读之后,比如解密
 	// HandleWrite 在写之前,比如加密
-	ReadWritePlugin interface {
-		HandleRead([]byte) []byte
+	WritePlugin interface {
 		HandleWrite([]byte) []byte
 	}
 )
@@ -34,7 +32,7 @@ type PluginContainer interface {
 	SetPlugin(plugin Plugin) // 实现插件注册
 	ConnAcceptedPlugin
 	ConnClosePlugin
-	ReadWritePlugin
+	WritePlugin
 }
 
 type pluginContainer struct {
@@ -42,7 +40,6 @@ type pluginContainer struct {
 	doHandleConnClosed   func(Conn)
 	doHandleCloseConn    func(Conn)
 
-	doHandleRead  func([]byte) []byte
 	doHandleWrite func([]byte) []byte
 }
 
@@ -56,8 +53,7 @@ func (pc *pluginContainer) SetPlugin(plugin Plugin) {
 		pc.doHandleCloseConn = p.HandleCloseConn
 	}
 
-	if p, ok := plugin.(ReadWritePlugin); ok {
-		pc.doHandleRead = p.HandleRead
+	if p, ok := plugin.(WritePlugin); ok {
 		pc.doHandleWrite = p.HandleWrite
 	}
 }
@@ -84,17 +80,9 @@ func (pc *pluginContainer) HandleCloseConn(conn Conn) {
 }
 
 //
-func (pc *pluginContainer) HandleRead(b []byte) []byte {
-	if pc.doHandleRead != nil {
-		return pc.doHandleRead(b)
-	}
-	return b
-}
-
-//
 func (pc *pluginContainer) HandleWrite(b []byte) []byte {
-	if pc.doHandleRead != nil {
-		pc.doHandleRead(b)
+	if pc.doHandleWrite != nil {
+		pc.doHandleWrite(b)
 	}
 	return b
 }

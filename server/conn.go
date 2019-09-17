@@ -11,7 +11,7 @@ import (
 // 为什么不直接用net.Conn?
 // 考虑兼容 websocket.Conn等其他情况
 type Conn interface {
-	Read(n int) ([]byte, error)  // 读取指定字节数
+	Read([]byte) (int, error)
 	Write(b []byte) (int, error) // 写
 	RemoteAddr() net.Addr        // 远端地址
 	Close() error                // 关闭
@@ -35,18 +35,15 @@ func NewNetConn(conn net.Conn, rto, wto time.Duration) *NetConn {
 	}
 }
 
-func (conn *NetConn) Read(n int) ([]byte, error) {
+func (conn *NetConn) Read(buff []byte) (int, error) {
 	if conn.readTimeout > 0 {
 		conn.Conn.SetReadDeadline(time.Now().Add(conn.readTimeout))
 	}
-	buff := make([]byte, n)
-	_, err := io.ReadFull(conn.Conn, buff)
+	n, err := io.ReadFull(conn.Conn, buff)
 	if err != nil {
 		log.Debugf("read error: %s, addr: %s", err, conn.RemoteAddr())
-	} else {
-		buff = Plugins.HandleRead(buff)
 	}
-	return buff, err
+	return n, err
 }
 
 func (conn *NetConn) Write(b []byte) (int, error) {

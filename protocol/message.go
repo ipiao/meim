@@ -2,15 +2,15 @@ package protocol
 
 import (
 	"errors"
-	"reflect"
+	"io"
 
 	"github.com/ipiao/meim/log"
-	"github.com/ipiao/meim/server"
 	"github.com/ipiao/meim/util"
 )
 
 var (
 	ErrorInvalidMessage  = errors.New("invalid message")
+	ErrorInvalidHeader   = errors.New("invalid header")
 	ErrorReadOutofRange  = errors.New("read body length out of range")
 	ErrorWriteOutofRange = errors.New("write body length out of range")
 
@@ -20,82 +20,89 @@ var (
 // 协议头
 type ProrocolHeader interface {
 	ProtocolData
-	Length() int
+	Cmd() int // 协议指令
 	BodyLength() int
-	SetBodyLength(int)
+	SetBodyLength(n int)
 }
 
 // 有一个完整的消息包含头和body两部分
 type Message struct {
-	header ProrocolHeader
-	body   ProtocolData
+	Header ProrocolHeader
+	Body   ProtocolBody
+}
+
+type MessageCodec interface {
+	HeaderLength() int
+	DecodeHeader(b []byte) (ProrocolHeader, error)
+	DecodeBody(cmd int, body []byte) (ProtocolBody, error)
 }
 
 // 给定消息结构读取
-func ReadLimitMessage(conn server.Conn, limitSize int, val *Message) error {
-	if val.header == nil {
-		return ErrorInvalidMessage
+func ReadLimitMessage(reader io.Reader, codec MessageCodec, limitSize int) (*Message, error) {
+	headLength := codec.HeaderLength()
+	if headLength <= 0 {
+		return nil, ErrorInvalidHeader
 	}
 
-	buff, err := conn.Read(val.header.Length())
+	headerLength := codec.HeaderLength()
+	buff := make([]byte, headerLength)
+	n, err := reader.Read(buff)
 	if err != nil {
-		return err
+		return nil, err
+	}
+	if n != headerLength {
+		log.Warnf("read invalid header length: need %d, actual %d", headerLength, n)
 	}
 
-	err = val.header.Decode(buff)
+	header, err := codec.DecodeHeader(buff)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	bodyLength := val.header.BodyLength()
+	bodyLength := header.BodyLength()
 	if bodyLength < 0 || bodyLength >= limitSize {
 		log.Warnf("invalid header length: %d", bodyLength)
-		return ErrorReadOutofRange
+		return nil, ErrorReadOutofRange
 	}
 
-	if bodyLength > 0 && val.body == nil {
-		return ErrorInvalidMessage
-	}
-
-	buff, err = conn.Read(bodyLength)
+	buff = make([]byte, bodyLength)
+	n, err = reader.Read(buff)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return val.body.Decode(buff)
+	if n != bodyLength {
+		log.Warnf("read invalid body length: need %d, actual %d", bodyLength, n)
+	}
+
+	body, err := codec.DecodeBody(header.Cmd(), buff)
+
+	return &Message{
+		Header: header,
+		Body:   body,
+	}, err
 }
 
 // 根据反射类型读取
-func ReadLimitMessage2(conn server.Conn, limitSize int, ht, bt reflect.Type) error {
-	header := protocolDataPools.Get(ht).(ProrocolHeader)
-	body := protocolDataPools.Get(bt).(ProtocolData)
-
-	message := &Message{
-		header: header,
-		body:   body,
-	}
-
-	return ReadLimitMessage(conn, limitSize, message)
-}
 
 // write 由服务端自己控制,不用限制字数
-func WriteMessage(conn server.Conn, message *Message) error {
+func WriteMessage(conn io.Writer, message *Message) error {
 	return WriteLimitMessage(conn, message, 0) // unlimited
 }
 
-func WriteLimitMessage(conn server.Conn, message *Message, limitSize int) error {
-	if message.header == nil {
+func WriteLimitMessage(conn io.Writer, message *Message, limitSize int) error {
+	if message.Header == nil {
 		return ErrorInvalidMessage
 	}
 
 	var body []byte
 	var err error
-	if message.body != nil {
-		body, err = message.body.Encode()
+	if message.Body != nil {
+		body, err = message.Body.Encode()
 		if err != nil {
 			return err
 		}
 	}
-	message.header.SetBodyLength(len(body))
+	message.Header.SetBodyLength(len(body))
 
 	if limitSize > 0 && len(body) > limitSize {
 		return ErrorWriteOutofRange
@@ -104,7 +111,7 @@ func WriteLimitMessage(conn server.Conn, message *Message, limitSize int) error 
 	buffer := bufPool.Get()
 	defer bufPool.Put(buffer)
 
-	hdr, err := message.header.Encode()
+	hdr, err := message.Header.Encode()
 	if err != nil {
 		return err
 	}
