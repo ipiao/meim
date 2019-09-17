@@ -2,39 +2,86 @@ package gate
 
 import (
 	"container/list"
-	"sync"
 
+	"github.com/ipiao/meim/log"
 	"github.com/ipiao/meim/protocol"
 	"github.com/ipiao/meim/server"
 )
 
 type Client struct {
-	conn server.Conn
-
-	closed    bool                   // 是否关闭
-	mch       chan *protocol.Message // 一般消息下发通道, message channel
-	lmsch     chan int               // 长消息下发(信号),long message signal channel
-	lmessages *list.List             // 长消息存储队列
-	extch     chan func(*Client)     // 外部时间队列, external event channel
-	mu        sync.Mutex             // 锁
+	Connection
 }
 
-func NewClient(conn server.Conn, mchSize, extchSize, readMax int) *Client {
-	return &Client{
-		conn:      conn,
-		mch:       make(chan *protocol.Message),
-		lmsch:     make(chan int, 1),
-		lmessages: list.New(),
-		extch:     make(chan func(*Client), extchSize),
-	}
+func NewClient(conn server.Conn, dc protocol.DataCreator) *Client {
+	client := new(Client)
+	client.conn = conn
+	client.mch = make(chan *protocol.Message, 16)
+	client.lmsch = make(chan int, 1)
+	client.lmessages = list.New()
+	client.extch = make(chan func(*Client), 8)
+	client.dc = dc
+	return nil
 }
 
-func (c *Client) read() {
+func (c *Client) Read() {
 	for {
-		// protocol.ReadLimitMessage(c.conn, 32*1024)
+		msg, err := protocol.ReadLimitMessage(c.conn, c.dc, 128*1024)
+		if err != nil {
+			log.Info("client read error:", err)
+			c.HandleCloseClient()
+			break
+		}
+		log.Debug(msg)
 	}
 }
 
-func (c *Client) write() {
+func (c *Client) Write() {
+	//发送在线消息
+	for {
+		select {
+		case msg := <-c.mch:
+			if msg == nil {
+				log.Infof("client:%d socket closed", c.uid)
+				c.conn.Close()
+				break
+			}
+			protocol.WriteMessage(c.conn, msg)
 
+		case <-c.lmsch:
+			c.SendLMessages()
+			break
+
+		}
+	}
+}
+
+//发送等待队列中的消息
+func (c *Client) SendLMessages() {
+	var messages *list.List
+	c.mu.Lock()
+	if c.lmessages.Len() == 0 {
+		c.mu.Unlock()
+		return
+	}
+	messages = c.lmessages
+	c.lmessages = list.New()
+	c.mu.Unlock()
+
+	e := messages.Front()
+	for e != nil {
+		msg := e.Value.(*protocol.Message)
+		protocol.WriteMessage(c.conn, msg)
+		e = e.Next()
+	}
+}
+
+func (c *Client) HandleCloseClient() {
+	if c.closed.CAS(false, true) {
+		c.mch <- nil
+	}
+}
+
+func (client *Client) Run() {
+	go client.Read()
+	client.Write()
 }
