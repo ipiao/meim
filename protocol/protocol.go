@@ -9,3 +9,12 @@ type ProtocolData interface {
 
 // 协议数据内容
 type ProtocolBody = ProtocolData
+
+// 协议头
+type ProrocolHeader interface {
+	ProtocolData
+	Length() int
+	Cmd() int // 协议指令
+	BodyLength() int
+	SetBodyLength(n int)
+}

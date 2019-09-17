@@ -17,34 +17,26 @@ var (
 	bufPool = util.NewBufferPool()
 )
 
-// 协议头
-type ProrocolHeader interface {
-	ProtocolData
-	Cmd() int // 协议指令
-	BodyLength() int
-	SetBodyLength(n int)
-}
-
 // 有一个完整的消息包含头和body两部分
 type Message struct {
 	Header ProrocolHeader
 	Body   ProtocolBody
 }
 
-type MessageCodec interface {
-	HeaderLength() int
-	DecodeHeader(b []byte) (ProrocolHeader, error)
-	DecodeBody(cmd int, body []byte) (ProtocolBody, error)
+type DataCreator interface {
+	CreateHeader() ProrocolHeader
+	CreateBody(cmd int) ProtocolBody
+}
+
+func ReadMessage(reader io.Reader, dc DataCreator) (*Message, error) {
+	return ReadLimitMessage(reader, dc, 0)
 }
 
 // 给定消息结构读取
-func ReadLimitMessage(reader io.Reader, codec MessageCodec, limitSize int) (*Message, error) {
-	headLength := codec.HeaderLength()
-	if headLength <= 0 {
-		return nil, ErrorInvalidHeader
-	}
+func ReadLimitMessage(reader io.Reader, dc DataCreator, limitSize int) (*Message, error) {
+	header := dc.CreateHeader()
 
-	headerLength := codec.HeaderLength()
+	headerLength := header.Length()
 	buff := make([]byte, headerLength)
 	n, err := reader.Read(buff)
 	if err != nil {
@@ -54,32 +46,32 @@ func ReadLimitMessage(reader io.Reader, codec MessageCodec, limitSize int) (*Mes
 		log.Warnf("read invalid header length: need %d, actual %d", headerLength, n)
 	}
 
-	header, err := codec.DecodeHeader(buff)
+	err = header.Decode(buff)
 	if err != nil {
 		return nil, err
 	}
 
 	bodyLength := header.BodyLength()
-	if bodyLength < 0 || bodyLength >= limitSize {
+	if bodyLength < 0 || (limitSize > 0 && bodyLength > limitSize) {
 		log.Warnf("invalid header length: %d", bodyLength)
 		return nil, ErrorReadOutofRange
 	}
 
-	buff = make([]byte, bodyLength)
-	n, err = reader.Read(buff)
-	if err != nil {
-		return nil, err
-	}
-	if n != bodyLength {
-		log.Warnf("read invalid body length: need %d, actual %d", bodyLength, n)
-	}
+	body := dc.CreateBody(header.Cmd())
+	if bodyLength > 0 {
+		buff = make([]byte, bodyLength)
+		n, err = reader.Read(buff)
+		if err != nil {
+			return nil, err
+		}
 
-	body, err := codec.DecodeBody(header.Cmd(), buff)
+		if n != bodyLength {
+			log.Warnf("read invalid body length: need %d, actual %d", bodyLength, n)
+		}
 
-	return &Message{
-		Header: header,
-		Body:   body,
-	}, err
+		err = body.Decode(buff)
+	}
+	return &Message{Header: header, Body: body}, err
 }
 
 // 根据反射类型读取

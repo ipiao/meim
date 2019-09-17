@@ -1,4 +1,4 @@
-package protocol
+package datamaker
 
 import "github.com/golang/protobuf/proto"
 
@@ -16,4 +16,8 @@ func (p *ProtoData) Encode() ([]byte, error) {
 
 func (p *ProtoData) Decode(b []byte) error {
 	return proto.Unmarshal(b, p.Message)
+}
+
+func (p *ProtoData) Reset() {
+	p.Message.Reset()
 }
