@@ -1,9 +1,8 @@
-package meim
+package gate
 
 import (
 	"sync"
 
-	"github.com/ipiao/meim/gate"
 	"github.com/ipiao/meim/log"
 	"github.com/ipiao/meim/server"
 )
@@ -12,7 +11,7 @@ import (
 type Route struct {
 	mutex       sync.Mutex
 	userClients map[int64]ClientSet
-	connClient  map[server.Conn]*gate.Client
+	connClient  map[server.Conn]*Client
 }
 
 func NewRoute() *Route {
@@ -23,7 +22,7 @@ func NewRoute() *Route {
 
 // uid 已经设置的情况下才可调用
 //
-func (route *Route) AddClient(client *gate.Client) {
+func (route *Route) AddClient(client *Client) {
 	route.mutex.Lock()
 	defer route.mutex.Unlock()
 	set, ok := route.userClients[client.UID()]
@@ -34,7 +33,7 @@ func (route *Route) AddClient(client *gate.Client) {
 	set.Add(client)
 }
 
-func (route *Route) RemoveClient(client *gate.Client) bool {
+func (route *Route) RemoveClient(client *Client) bool {
 	route.mutex.Lock()
 	defer route.mutex.Unlock()
 	if set, ok := route.userClients[client.UID()]; ok {
@@ -71,24 +70,24 @@ func (route *Route) IsOnline(uid int64) bool {
 	return false
 }
 
-type ClientSet map[*gate.Client]struct{}
+type ClientSet map[*Client]struct{}
 
 func NewClientSet() ClientSet {
-	return make(map[*gate.Client]struct{})
+	return make(map[*Client]struct{})
 }
 
-func (set ClientSet) Add(c *gate.Client) {
+func (set ClientSet) Add(c *Client) {
 	set[c] = struct{}{}
 }
 
-func (set ClientSet) IsMember(c *gate.Client) bool {
+func (set ClientSet) IsMember(c *Client) bool {
 	if _, ok := set[c]; ok {
 		return true
 	}
 	return false
 }
 
-func (set ClientSet) Remove(c *gate.Client) {
+func (set ClientSet) Remove(c *Client) {
 	if _, ok := set[c]; !ok {
 		return
 	}
@@ -101,7 +100,7 @@ func (set ClientSet) Count() int {
 
 // 只是浅复制
 func (set ClientSet) Clone() ClientSet {
-	n := make(map[*gate.Client]struct{})
+	n := make(map[*Client]struct{})
 	for k, v := range set {
 		n[k] = v
 	}
