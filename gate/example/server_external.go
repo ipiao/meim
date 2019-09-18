@@ -1,18 +1,23 @@
-package gate
+package gate_example
 
 import (
 	"sync"
 
+	"github.com/ipiao/meim/gate"
 	"github.com/ipiao/meim/server"
+)
+
+var (
+	HandleClientClosed func(*gate.Client) // 关闭客户端之后的处理
 )
 
 type serverPlugins struct {
 	mu      sync.RWMutex
-	clients map[server.Conn]*Client
+	clients map[server.Conn]*gate.Client
 }
 
 func (sp *serverPlugins) HandleConnAccepted(conn server.Conn) {
-	cilent := NewClient(conn, nil)
+	cilent := gate.NewClient(conn, nil)
 	sp.mu.Lock()
 	sp.clients[conn] = cilent
 	sp.mu.Unlock()
@@ -44,9 +49,12 @@ var sps *serverPlugins
 
 func init() {
 	sps = &serverPlugins{
-		clients: make(map[server.Conn]*Client),
+		clients: make(map[server.Conn]*gate.Client),
 	}
-	server.Plugins.SetPlugin(sps)
+	// server.Plugins.SetPlugin(sps)
+	server.HandleCloseConn = sps.HandleConnClosed
+	server.HandleConnAccepted = sps.HandleConnAccepted
+	server.HandleConnClosed = sps.HandleConnClosed
 }
 
 // func Clients() ClientSet {

@@ -32,6 +32,22 @@ type Connection struct {
 	userdata interface{} // 用户数据
 }
 
+func (c *Connection) SetUID(uid int64) {
+	c.uid = uid
+}
+
+func (c *Connection) SetUserData(ud interface{}) {
+	c.userdata = ud
+}
+
+func (c *Connection) UID() int64 {
+	return c.uid
+}
+
+func (c *Connection) UserData() interface{} {
+	return c.userdata
+}
+
 func (c *Connection) Log() string {
 	return fmt.Sprintf("uid %d, addr %s", c.uid, c.Conn.RemoteAddr())
 }
