@@ -10,8 +10,7 @@ func init() {
 }
 
 // 服务插件
-type Plugin interface {
-}
+type Plugin interface{}
 
 type (
 	// 在Accept得到一个net.Conn后调用生成Conn
@@ -25,11 +24,6 @@ type (
 		HandleConnClosed(Conn) // 关闭之后的处理
 		HandleCloseConn(Conn)  // 主动关闭,需要在逻辑上保证连接会断开
 	}
-
-	// HandleWrite 在写之前,比如加密
-	WritePlugin interface {
-		HandleWrite([]byte) []byte
-	}
 )
 
 // 插件槽,通过实现插件幷注册进入插件槽,对流程某些环间进行控制
@@ -39,7 +33,6 @@ type PluginContainer interface {
 	SetPlugin(plugin Plugin) // 实现插件注册
 	ConnAcceptedPlugin
 	ConnClosePlugin
-	WritePlugin
 }
 
 // 需要外部调用者注入实现的方法函数
@@ -47,8 +40,6 @@ type pluginContainer struct {
 	doHandleConnAccepted func(Conn)
 	doHandleConnClosed   func(Conn)
 	doHandleCloseConn    func(Conn)
-
-	doHandleWrite func([]byte) []byte
 }
 
 func (pc *pluginContainer) SetPlugin(plugin Plugin) {
@@ -61,9 +52,6 @@ func (pc *pluginContainer) SetPlugin(plugin Plugin) {
 		pc.doHandleCloseConn = p.HandleCloseConn
 	}
 
-	if p, ok := plugin.(WritePlugin); ok {
-		pc.doHandleWrite = p.HandleWrite
-	}
 }
 
 //
@@ -85,14 +73,6 @@ func (pc *pluginContainer) HandleCloseConn(conn Conn) {
 	if pc.doHandleCloseConn != nil {
 		pc.doHandleCloseConn(conn)
 	}
-}
-
-//
-func (pc *pluginContainer) HandleWrite(b []byte) []byte {
-	if pc.doHandleWrite != nil {
-		pc.doHandleWrite(b)
-	}
-	return b
 }
 
 //

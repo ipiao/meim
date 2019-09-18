@@ -50,7 +50,7 @@ func (conn *NetConn) Write(b []byte) (int, error) {
 	if conn.writeTimeout > 0 {
 		conn.Conn.SetWriteDeadline(time.Now().Add(conn.writeTimeout))
 	}
-	n, err := conn.Conn.Write(Plugins.HandleWrite(b))
+	n, err := conn.Conn.Write(b)
 	if err != nil {
 		log.Debugf("write error: %s, addr: %s", err, conn.RemoteAddr())
 	}

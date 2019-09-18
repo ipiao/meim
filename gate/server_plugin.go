@@ -7,26 +7,64 @@ import (
 )
 
 type serverPlugins struct {
-	sync.RWMutex
+	mu      sync.RWMutex
 	clients map[server.Conn]*Client
 }
 
-func (*serverPlugins) HandleConnAccepted(server.Conn) {
-
+func (sp *serverPlugins) HandleConnAccepted(conn server.Conn) {
+	cilent := NewClient(conn, nil)
+	sp.mu.Lock()
+	sp.clients[conn] = cilent
+	sp.mu.Unlock()
+	cilent.Run()
 }
 
-func (*serverPlugins) HandleConnClosed(server.Conn) {
-
+func (sp *serverPlugins) HandleCloseConn(conn server.Conn) {
+	sp.mu.RLock()
+	client, ok := sp.clients[conn]
+	sp.mu.RUnlock()
+	if ok {
+		client.Close()
+	}
 }
 
-func (*serverPlugins) HandleCloseConn(server.Conn) {
-
+func (sp *serverPlugins) HandleConnClosed(conn server.Conn) {
+	sp.mu.RLock()
+	client, ok := sp.clients[conn]
+	sp.mu.RUnlock()
+	if ok {
+		HandleClientClosed(client)
+		sp.mu.Lock()
+		delete(sp.clients, conn)
+		sp.mu.Unlock()
+	}
 }
 
-func (*serverPlugins) HandleWrite(server.Conn) {
-
-}
+var sps *serverPlugins
 
 func init() {
-	server.Plugins.SetPlugin(&serverPlugins{})
+	sps = &serverPlugins{
+		clients: make(map[server.Conn]*Client),
+	}
+	server.Plugins.SetPlugin(sps)
 }
+
+// func Clients() ClientSet {
+// 	set := NewClientSet()
+
+// 	sps.mu.RLock()
+// 	defer sps.mu.RUnlock()
+
+// 	for _, v := range sps.clients {
+// 		set[v] = struct{}{}
+// 	}
+// 	return set
+// }
+
+// func HasClient(c *Client) bool {
+// 	sps.mu.RLock()
+// 	defer sps.mu.RUnlock()
+
+// 	_, ok := sps.clients[c.Conn]
+// 	return ok
+// }
