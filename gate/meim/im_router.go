@@ -1,21 +1,23 @@
-package gate
+package meim
 
 import (
 	"sync"
 
 	"github.com/ipiao/meim/gate"
 	"github.com/ipiao/meim/log"
+	"github.com/ipiao/meim/server"
 )
 
 // user router
 type Route struct {
-	mutex   sync.Mutex
-	clients map[int64]ClientSet
+	mutex       sync.Mutex
+	userClients map[int64]ClientSet
+	connClient  map[server.Conn]*gate.Client
 }
 
 func NewRoute() *Route {
 	route := new(Route)
-	route.clients = make(map[int64]ClientSet)
+	route.userClients = make(map[int64]ClientSet)
 	return route
 }
 
@@ -24,10 +26,10 @@ func NewRoute() *Route {
 func (route *Route) AddClient(client *gate.Client) {
 	route.mutex.Lock()
 	defer route.mutex.Unlock()
-	set, ok := route.clients[client.UID()]
+	set, ok := route.userClients[client.UID()]
 	if !ok {
 		set = NewClientSet()
-		route.clients[client.UID()] = set
+		route.userClients[client.UID()] = set
 	}
 	set.Add(client)
 }
@@ -35,10 +37,10 @@ func (route *Route) AddClient(client *gate.Client) {
 func (route *Route) RemoveClient(client *gate.Client) bool {
 	route.mutex.Lock()
 	defer route.mutex.Unlock()
-	if set, ok := route.clients[client.UID()]; ok {
+	if set, ok := route.userClients[client.UID()]; ok {
 		set.Remove(client)
 		if set.Count() == 0 {
-			delete(route.clients, client.UID())
+			delete(route.userClients, client.UID())
 		}
 		return true
 	}
@@ -50,7 +52,7 @@ func (route *Route) FindClientSet(uid int64) ClientSet {
 	route.mutex.Lock()
 	defer route.mutex.Unlock()
 
-	set, ok := route.clients[uid]
+	set, ok := route.userClients[uid]
 	if ok {
 		return set.Clone()
 	} else {
@@ -62,7 +64,7 @@ func (route *Route) IsOnline(uid int64) bool {
 	route.mutex.Lock()
 	defer route.mutex.Unlock()
 
-	set, ok := route.clients[uid]
+	set, ok := route.userClients[uid]
 	if ok {
 		return len(set) > 0
 	}

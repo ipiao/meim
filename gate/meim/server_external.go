@@ -1,4 +1,4 @@
-package gate_example
+package meim
 
 import (
 	"sync"
