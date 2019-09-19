@@ -1,7 +1,6 @@
 package server
 
 import (
-	"io"
 	"net"
 	"time"
 
@@ -39,7 +38,8 @@ func (conn *NetConn) Read(buff []byte) (int, error) {
 	if conn.readTimeout > 0 {
 		conn.Conn.SetReadDeadline(time.Now().Add(conn.readTimeout))
 	}
-	n, err := io.ReadFull(conn.Conn, buff)
+	n, err := conn.Conn.Read(buff)
+	// n, err := io.ReadFull(conn.Conn, buff)
 	if err != nil {
 		log.Debugf("read error: %s, addr: %s", err, conn.RemoteAddr())
 	}

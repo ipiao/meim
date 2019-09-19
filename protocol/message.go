@@ -38,12 +38,9 @@ func ReadLimitMessage(reader io.Reader, dc DataCreator, limitSize int) (*Message
 
 	headerLength := header.Length()
 	buff := make([]byte, headerLength)
-	n, err := reader.Read(buff)
+	_, err := io.ReadFull(reader, buff)
 	if err != nil {
 		return nil, err
-	}
-	if n != headerLength {
-		log.Warnf("read invalid header length: need %d, actual %d", headerLength, n)
 	}
 
 	err = header.Decode(buff)
@@ -60,15 +57,10 @@ func ReadLimitMessage(reader io.Reader, dc DataCreator, limitSize int) (*Message
 	body := dc.CreateBody(header.Cmd())
 	if bodyLength > 0 {
 		buff = make([]byte, bodyLength)
-		n, err = reader.Read(buff)
+		_, err = io.ReadFull(reader, buff)
 		if err != nil {
 			return nil, err
 		}
-
-		if n != bodyLength {
-			log.Warnf("read invalid body length: need %d, actual %d", bodyLength, n)
-		}
-
 		err = body.Decode(buff)
 	}
 	return &Message{Header: header, Body: body}, err
