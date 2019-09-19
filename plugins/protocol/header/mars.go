@@ -39,6 +39,10 @@ func (h *MarsHeader) Cmd() int {
 	return int(h.Command)
 }
 
+func (h *MarsHeader) SetCmd(cmd int) {
+	h.Command = uint32(cmd)
+}
+
 func (h *MarsHeader) BodyLength() int {
 	return int(h.BodyLen)
 }

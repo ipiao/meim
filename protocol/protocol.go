@@ -14,7 +14,8 @@ type ProtocolBody = ProtocolData
 type ProrocolHeader interface {
 	ProtocolData
 	Length() int
-	Cmd() int // 协议指令
+	Cmd() int   // 协议指令
+	SetCmd(int) // 指定协议指令
 	BodyLength() int
 	SetBodyLength(n int)
 }

@@ -44,6 +44,10 @@ func (h *LeafHeader) Cmd() int {
 	return int(h.Command)
 }
 
+func (h *LeafHeader) SetCmd(cmd int) {
+	h.Command = uint32(cmd)
+}
+
 func (h *LeafHeader) BodyLength() int {
 	return int(h.BodyLen)
 }

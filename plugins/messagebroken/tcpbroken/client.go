@@ -4,18 +4,22 @@ import (
 	"net"
 	"time"
 
-	"github.com/ipiao/meim/gate"
 	"github.com/ipiao/meim/log"
+	"github.com/ipiao/meim/protocol"
 )
 
 type TCPBrokenClient struct {
-	addr string
-	conn net.Conn
+	addr     string
+	dc       protocol.DataCreator
+	conn     net.Conn
+	subCmd   int
+	unsubCmd int
 }
 
-func NewTCPRouterClient(addr string) *TCPBrokenClient {
+func NewTCPRouterClient(addr string, dc protocol.DataCreator, subCmd, unsubCmd int) *TCPBrokenClient {
 	tr := &TCPBrokenClient{
 		addr: addr,
+		dc:   dc,
 	}
 	return tr
 }
@@ -43,6 +47,30 @@ func (tr *TCPBrokenClient) Connect() {
 	}
 }
 
-func (tr *TCPBrokenClient) SendMessage(msg *gate.InternalMessage) error {
-	return nil
+func (tr *TCPBrokenClient) SendMessage(msg *protocol.InternalMessage) error {
+	data, err := protocol.MarshalInternalMessage(msg)
+	if err == nil {
+		tr.conn.Write(data)
+	}
+	return err
+}
+
+func (tr *TCPBrokenClient) ReceiveMessage() (*protocol.InternalMessage, error) {
+	return protocol.ReadInternalMessage(tr.conn, tr.dc)
+}
+
+func (tr *TCPBrokenClient) Subscribe(uid int64) {
+	msg := new(protocol.InternalMessage)
+	msg.Header = tr.dc.CreateHeader()
+	msg.Header.SetCmd(tr.subCmd)
+	msg.Sender = uid
+	tr.SendMessage(msg)
+}
+
+func (tr *TCPBrokenClient) UnSubscribe(uid int64) {
+	msg := new(protocol.InternalMessage)
+	msg.Header = tr.dc.CreateHeader()
+	msg.Header.SetCmd(tr.unsubCmd)
+	msg.Sender = uid
+	tr.SendMessage(msg)
 }
