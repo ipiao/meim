@@ -74,7 +74,24 @@ func ReadLimitMessage(reader io.Reader, dc DataCreator, limitSize int) (*Message
 	return &Message{Header: header, Body: body}, err
 }
 
-// 根据反射类型读取
+// 编码Message
+func UnmarshalMessgae(b []byte, message *Message) error {
+	headerLength := message.Header.Length()
+
+	if len(b) < headerLength {
+		return ErrorReadOutofRange
+	}
+	head := b[:headerLength]
+	err := message.Header.Decode(head)
+	if err != nil {
+		return err
+	}
+
+	if message.Header.BodyLength() != len(b)-headerLength {
+		return ErrorInvalidMessage
+	}
+	return message.Body.Decode(b[headerLength:])
+}
 
 // write 由服务端自己控制,不用限制字数
 func WriteMessage(conn io.Writer, message *Message) error {
@@ -85,30 +102,45 @@ func WriteLimitMessage(conn io.Writer, message *Message, limitSize int) error {
 	if message.Header == nil {
 		return ErrorInvalidMessage
 	}
+	data, err := MarshalLimitMessgae(message, limitSize)
+	if err != nil {
+		return err
+	}
+	_, err = conn.Write(data)
+	return err
+}
+
+func MarshalLimitMessgae(message *Message, limitSize int) ([]byte, error) {
+	if message.Header == nil {
+		return nil, ErrorInvalidHeader
+	}
 
 	var body []byte
 	var err error
 	if message.Body != nil {
 		body, err = message.Body.Encode()
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
-	message.Header.SetBodyLength(len(body))
-
 	if limitSize > 0 && len(body) > limitSize {
-		return ErrorWriteOutofRange
+		return nil, ErrorWriteOutofRange
 	}
-
+	message.Header.SetBodyLength(len(body))
 	buffer := bufPool.Get()
 	defer bufPool.Put(buffer)
 
 	hdr, err := message.Header.Encode()
 	if err != nil {
-		return err
+		return nil, err
 	}
+
 	buffer.Write(hdr)
 	buffer.Write(body)
-	_, err = conn.Write(buffer.Bytes())
-	return err
+	return buffer.Bytes(), nil
+}
+
+// 编码Message
+func MarshalMessgae(message *Message) ([]byte, error) {
+	return MarshalLimitMessgae(message, 0)
 }
