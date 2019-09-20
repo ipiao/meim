@@ -15,9 +15,7 @@ func TestServer(t *testing.T) {
 	}
 
 	s := NewServerWithConfig(lncfg)
-	s.Plugins.SetPlugin(&plugins{
-		c: make(map[Conn]chan struct{}),
-	})
+	SetExternalPlugin(&plugins{})
 	s.Run()
 }
 
@@ -25,7 +23,7 @@ type plugins struct {
 	c map[Conn]chan struct{}
 }
 
-func (p *plugins) HandleConnAccept(conn Conn) {
+func (p *plugins) HandleConnAccepted(conn Conn) {
 	log.Info("conn accepted")
 	p.c[conn] = make(chan struct{})
 

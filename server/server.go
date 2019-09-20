@@ -100,10 +100,8 @@ func (s *Server) makeListener() (ln net.Listener, err error) {
 }
 
 func (s *Server) Run() {
-
-	// check plugin
-	if err := CheckExternalHandlers(); err != nil {
-		log.Fatal(err)
+	if exts == nil {
+		log.Fatalf("external plugin not set")
 	}
 
 	s.startShutdownListener()
@@ -123,7 +121,7 @@ func (s *Server) Run() {
 	// 处理ConnsClose
 	s.connsMu.Lock()
 	for conn := range s.conns {
-		HandleCloseConn(conn)
+		exts.HandleCloseConn(conn)
 	}
 	s.connsMu.Unlock()
 	s.wgConns.Wait()
@@ -182,14 +180,14 @@ func (s *Server) handleConn(conn net.Conn) {
 	log.Debug("new conn: %s", conn.RemoteAddr())
 
 	go func() {
-		HandleConnAccepted(netConn) // 这里面进行Conn消息收发处理等,阻塞
+		exts.HandleConnAccepted(netConn) // 这里面进行Conn消息收发处理等,阻塞
 		// 阻塞条件结束
 		netConn.Close()
 		s.connsMu.Lock()
 		s.conns.Remove(netConn)
 		s.connsMu.Unlock()
 
-		HandleConnClosed(netConn)
+		exts.HandleConnClosed(netConn)
 		s.wgConns.Done()
 	}()
 }

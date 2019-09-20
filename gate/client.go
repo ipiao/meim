@@ -33,7 +33,7 @@ func (c *Client) read() {
 			c.Close()
 			break
 		}
-		HandleMessage(c, msg)
+		exts.HandleMessage(c, msg)
 	}
 }
 
@@ -66,12 +66,6 @@ func (c *Client) Close() {
 }
 
 func (client *Client) Run() {
-	HandleAuthClient(client)
-
-	if client.dc == nil {
-		log.Warnf("client %s auth failed, dc not set", client.Log())
-		return
-	}
 	client.write()
 	go client.read()
 }

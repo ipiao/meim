@@ -1,27 +1,21 @@
 package server
 
-import (
-	"errors"
-)
+import "sync"
+
+type ExternalPlugin interface {
+	HandleConnAccepted(Conn)
+	HandleCloseConn(Conn)
+	HandleConnClosed(Conn)
+}
 
 var (
-	HandleConnAccepted func(Conn)
-	HandleCloseConn    func(Conn)
-	HandleConnClosed   func(Conn)
+	exts     ExternalPlugin
+	extsOnce sync.Once
 )
 
-//
-func CheckExternalHandlers() error {
-	if HandleConnAccepted == nil {
-		return errors.New("external handler HandleConnAccepted not set")
-	}
-
-	if HandleCloseConn == nil {
-		return errors.New("external handler HandleCloseConn not set")
-	}
-
-	if HandleConnClosed == nil {
-		return errors.New("external handler HandleConnClosed not set")
-	}
-	return nil
+// 只能调用一次
+func SetExternalPlugin(plugin ExternalPlugin) {
+	extsOnce.Do(func() {
+		exts = plugin
+	})
 }

@@ -1,60 +1,65 @@
 package gate
 
 import (
+	"github.com/ipiao/meim/log"
 	"github.com/ipiao/meim/server"
 )
 
-// server 和 gate的外部函数实现
+// server 的外部函数实现
+//
+// 在自己的项目中可以通过继承ExternalImp进行函数重写
 
-type externalImp struct {
+type ExternalImp struct {
 	*Router
 	conns map[server.Conn]*Client
 }
 
-func newExternalImp() *externalImp {
-	return &externalImp{
+func NewExternalImp() *ExternalImp {
+	return &ExternalImp{
 		Router: NewRouter(),
 		conns:  make(map[server.Conn]*Client),
 	}
 }
 
-func (sp *externalImp) HandleConnAccepted(conn server.Conn) {
-	cilent := NewClient(conn, nil)
+func (eimp *ExternalImp) HandleConnAccepted(conn server.Conn) {
+	client := NewClient(conn, nil)
 
-	sp.mu.Lock()
-	sp.conns[conn] = cilent
-	sp.mu.Unlock()
+	eimp.mu.Lock()
+	eimp.conns[conn] = client
+	eimp.mu.Unlock()
 
-	cilent.Run()
+	exts.HandleAuthClient(client)
+	if client.dc == nil {
+		log.Errorf("conn %s DC not set", client.Log())
+		return
+	}
+	client.Run()
 }
 
-func (sp *externalImp) HandleCloseConn(conn server.Conn) {
-	sp.mu.RLock()
-	client, ok := sp.conns[conn]
-	sp.mu.RUnlock()
+func (eimp *ExternalImp) HandleCloseConn(conn server.Conn) {
+	eimp.mu.RLock()
+	client, ok := eimp.conns[conn]
+	eimp.mu.RUnlock()
 	if ok {
 		client.Close()
 	}
 }
 
-func (sp *externalImp) HandleConnClosed(conn server.Conn) {
-	sp.mu.RLock()
-	client, ok := sp.conns[conn]
-	sp.mu.RUnlock()
+func (eimp *ExternalImp) HandleConnClosed(conn server.Conn) {
+	eimp.mu.RLock()
+	client, ok := eimp.conns[conn]
+	eimp.mu.RUnlock()
 	if ok {
-		HandleClientClosed(client)
-		sp.mu.Lock()
-		delete(sp.conns, conn)
-		sp.mu.Unlock()
+		exts.HandleClientClosed(client)
+		eimp.mu.Lock()
+		delete(eimp.conns, conn)
+		eimp.mu.Unlock()
 	}
 }
 
-var eimp *externalImp
-
-func init() {
-	eimp = newExternalImp()
-
-	server.HandleCloseConn = eimp.HandleConnClosed
-	server.HandleConnAccepted = eimp.HandleConnAccepted
-	server.HandleConnClosed = eimp.HandleConnClosed
-}
+//var eimp *ExternalImp
+//
+//func init() {
+//	eimp = NewExternalImp()
+//	server.SetExternalPlugin(eimp)
+//}

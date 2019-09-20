@@ -3,6 +3,8 @@ package server
 import (
 	"crypto/tls"
 	"net"
+
+	"github.com/ipiao/meim/log"
 )
 
 // 监听服务,适配不同的网络服务
@@ -23,7 +25,7 @@ var makeListeners = make(map[string]MakeListener)
 // RegisterMakeListener registers a MakeListener for network.
 func RegisterMakeListener(network string, ml MakeListener) {
 	if _, ok := makeListeners[network]; ok {
-
+		log.Warnf("listener %s already exists, it will be replaced", network)
 	}
 	makeListeners[network] = ml
 }
@@ -36,17 +38,6 @@ func init() {
 }
 
 func tcpMakeListener(network string) func(cfg *ListenerConfig) (ln net.Listener, err error) {
-	return func(cfg *ListenerConfig) (ln net.Listener, err error) {
-		if cfg.TLSConfig == nil {
-			ln, err = net.Listen(network, cfg.Address)
-		} else {
-			ln, err = tls.Listen(network, cfg.Address, cfg.TLSConfig)
-		}
-		return ln, err
-	}
-}
-
-func udpMakeListener(network string) func(cfg *ListenerConfig) (ln net.Listener, err error) {
 	return func(cfg *ListenerConfig) (ln net.Listener, err error) {
 		if cfg.TLSConfig == nil {
 			ln, err = net.Listen(network, cfg.Address)
