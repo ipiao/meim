@@ -1,6 +1,7 @@
 package tcpbroken
 
 import (
+	"errors"
 	"net"
 	"time"
 
@@ -47,10 +48,15 @@ func (tr *TCPBrokenClient) Connect() {
 	}
 }
 
+func (tr *TCPBrokenClient) SyncMessage(msg *protocol.InternalMessage) (*protocol.InternalMessage, error) {
+	log.Warn("unsupported operation: SyncMessage")
+	return nil, errors.New("SyncMessage not supported")
+}
+
 func (tr *TCPBrokenClient) SendMessage(msg *protocol.InternalMessage) error {
 	data, err := protocol.MarshalInternalMessage(msg)
 	if err == nil {
-		tr.conn.Write(data)
+		_, err = tr.conn.Write(data)
 	}
 	return err
 }
@@ -73,4 +79,8 @@ func (tr *TCPBrokenClient) UnSubscribe(uid int64) {
 	msg.Header.SetCmd(tr.unsubCmd)
 	msg.Sender = uid
 	tr.SendMessage(msg)
+}
+
+func (tr *TCPBrokenClient) Close() {
+	tr.conn.Close()
 }

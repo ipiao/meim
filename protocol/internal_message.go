@@ -55,6 +55,41 @@ func MarshalInternalMessage(message *InternalMessage) ([]byte, error) {
 }
 
 // 编码Message
+func UnmarshalInternalMessgae(b []byte, dc DataCreator) (*InternalMessage, error) {
+	message := new(InternalMessage)
+	message.Header = dc.CreateHeader()
+
+	headerLength := message.Header.Length()
+
+	if len(b) < headerLength {
+		return message, ErrorReadOutofRange
+	}
+	head := b[:headerLength]
+	err := message.Header.Decode(head)
+	if err != nil {
+		return message, err
+	}
+
+	bodyLength := message.Header.BodyLength()
+	if bodyLength != len(b)-headerLength {
+		return message, ErrorInvalidMessage
+	}
+
+	message.Body = dc.CreateBody(message.Header.Cmd())
+	if bodyLength >= 24 {
+		message.Sender = int64(binary.BigEndian.Uint64(b[headerLength : headerLength+8]))
+		message.Receiver = int64(binary.BigEndian.Uint64(b[headerLength+8 : headerLength+16]))
+		message.Timestamp = int64(binary.BigEndian.Uint64(b[headerLength+16 : headerLength+24]))
+
+		err = message.Body.Decode(b[headerLength+24:])
+	} else {
+		return message, ErrorInvalidMessage
+	}
+
+	return message, err
+}
+
+// 编码Message
 func ReadInternalMessage(reader io.Reader, dc DataCreator) (*InternalMessage, error) {
 	message := new(InternalMessage)
 	header := dc.CreateHeader()

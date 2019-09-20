@@ -67,22 +67,28 @@ func ReadLimitMessage(reader io.Reader, dc DataCreator, limitSize int) (*Message
 }
 
 // 编码Message
-func UnmarshalMessgae(b []byte, message *Message) error {
+func UnmarshalMessgae(b []byte, dc DataCreator) (*Message, error) {
+	message := &Message{
+		Header: dc.CreateHeader(),
+	}
+
 	headerLength := message.Header.Length()
 
 	if len(b) < headerLength {
-		return ErrorReadOutofRange
+		return message, ErrorReadOutofRange
 	}
 	head := b[:headerLength]
 	err := message.Header.Decode(head)
 	if err != nil {
-		return err
+		return message, err
 	}
 
 	if message.Header.BodyLength() != len(b)-headerLength {
-		return ErrorInvalidMessage
+		return message, ErrorInvalidMessage
 	}
-	return message.Body.Decode(b[headerLength:])
+	message.Body = dc.CreateBody(message.Header.Cmd())
+	err = message.Body.Decode(b[headerLength:])
+	return message, err
 }
 
 // write 由服务端自己控制,不用限制字数
