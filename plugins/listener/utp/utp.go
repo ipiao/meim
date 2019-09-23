@@ -4,13 +4,13 @@ import (
 	"net"
 
 	"github.com/anacrolix/utp"
-	"github.com/ipiao/meim/comect"
+	"github.com/ipiao/meim/server"
 )
 
 func init() {
-	comect.RegisterMakeListener("utp", utpMakeListener)
+	server.RegisterMakeListener("utp", utpMakeListener)
 }
 
-func utpMakeListener(cfg *comect.ListenerConfig) (ln net.Listener, err error) {
+func utpMakeListener(cfg *server.ListenerConfig) (ln net.Listener, err error) {
 	return utp.Listen(cfg.Address)
 }

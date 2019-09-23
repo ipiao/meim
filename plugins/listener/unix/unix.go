@@ -3,14 +3,14 @@ package unix
 import (
 	"net"
 
-	"github.com/ipiao/meim/comect"
+	"github.com/ipiao/meim/server"
 )
 
 func init() {
-	comect.RegisterMakeListener("unix", unixMakeListener)
+	server.RegisterMakeListener("unix", unixMakeListener)
 }
 
-func unixMakeListener(cfg *comect.ListenerConfig) (ln net.Listener, err error) {
+func unixMakeListener(cfg *server.ListenerConfig) (ln net.Listener, err error) {
 	laddr, err := net.ResolveUnixAddr("unix", cfg.Address)
 	if err != nil {
 		return nil, err

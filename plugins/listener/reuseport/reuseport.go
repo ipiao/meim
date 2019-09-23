@@ -5,15 +5,15 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ipiao/meim/comect"
+	"github.com/ipiao/meim/server"
 	reuseport "github.com/kavu/go_reuseport"
 )
 
 func init() {
-	comect.RegisterMakeListener("reuseport", reuseportMakeListener)
+	server.RegisterMakeListener("reuseport", reuseportMakeListener)
 }
 
-func reuseportMakeListener(cfg *comect.ListenerConfig) (ln net.Listener, err error) {
+func reuseportMakeListener(cfg *server.ListenerConfig) (ln net.Listener, err error) {
 	var network string
 	if validIP4(cfg.Address) {
 		network = "tcp4"
