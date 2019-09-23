@@ -4,10 +4,14 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/ipiao/meim"
+
 	"github.com/ipiao/meim/plugins/dc"
 )
 
 func TestRediQ(t *testing.T) {
+	var rmb meim.MessageBroker
+
 	keyFunc := func(uid int64) string {
 		return fmt.Sprintf("USER_NODE:%d", uid)
 	}
@@ -20,7 +24,7 @@ func TestRediQ(t *testing.T) {
 	dc := dc.NewDataCreator()
 	mq := NewRabbitBroker(mqcfg, dc, nil)
 
-	rmb := NewRegisterMQ(redi, mq)
+	rmb = NewRegisterMQ(redi, mq)
 	rmb.Connect()
 
 	rmb.Close()
