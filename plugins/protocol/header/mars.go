@@ -1,4 +1,4 @@
-package mars
+package header
 
 import "encoding/binary"
 

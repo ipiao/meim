@@ -11,7 +11,7 @@ type ProtocolData interface {
 type ProtocolBody = ProtocolData
 
 // 协议头
-type ProrocolHeader interface {
+type ProtocolHeader interface {
 	ProtocolData
 	Length() int
 	Cmd() int   // 协议指令

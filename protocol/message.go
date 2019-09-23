@@ -19,12 +19,12 @@ var (
 
 // 有一个完整的消息包含头和body两部分
 type Message struct {
-	Header ProrocolHeader
+	Header ProtocolHeader
 	Body   ProtocolBody
 }
 
 type DataCreator interface {
-	CreateHeader() ProrocolHeader
+	CreateHeader() ProtocolHeader
 	CreateBody(cmd int) ProtocolBody
 }
 

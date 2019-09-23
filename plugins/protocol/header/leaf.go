@@ -10,7 +10,7 @@ type LeafHeader struct {
 	Command   uint32
 	Version   uint16
 	Seq       uint32
-	Extral    uint64
+	Extra     uint64
 }
 
 func (h *LeafHeader) Decode(b []byte) error {
@@ -20,7 +20,7 @@ func (h *LeafHeader) Decode(b []byte) error {
 	h.Command = binary.LittleEndian.Uint32(b[6:10])
 	h.Version = binary.LittleEndian.Uint16(b[10:12])
 	h.Seq = binary.LittleEndian.Uint32(b[12:16])
-	h.Extral = binary.LittleEndian.Uint64(b[16:24])
+	h.Extra = binary.LittleEndian.Uint64(b[16:24])
 	return nil
 }
 
@@ -32,7 +32,7 @@ func (h *LeafHeader) Encode() ([]byte, error) {
 	binary.LittleEndian.PutUint32(b[6:10], h.Command)
 	binary.LittleEndian.PutUint16(b[10:12], h.Version)
 	binary.LittleEndian.PutUint32(b[12:16], h.Seq)
-	binary.LittleEndian.PutUint64(b[16:24], h.Extral)
+	binary.LittleEndian.PutUint64(b[16:24], h.Extra)
 	return b, nil
 }
 
