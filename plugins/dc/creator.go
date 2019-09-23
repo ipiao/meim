@@ -1,11 +1,11 @@
-package datacreator
+package dc
 
 import (
 	"fmt"
 	"reflect"
 
+	"github.com/ipiao/meim"
 	"github.com/ipiao/meim/log"
-	"github.com/ipiao/meim/protocol"
 )
 
 type DataCreator struct {
@@ -94,16 +94,16 @@ func (m *DataCreator) Clone() *DataCreator {
 	}
 }
 
-func (m *DataCreator) CreateHeader() protocol.ProtocolHeader {
-	return newTypeData(m.headerType).(protocol.ProtocolHeader)
+func (m *DataCreator) CreateHeader() meim.ProtocolHeader {
+	return newTypeData(m.headerType).(meim.ProtocolHeader)
 }
 
-func (m *DataCreator) CreateBody(cmd int) protocol.ProtocolBody {
+func (m *DataCreator) CreateBody(cmd int) meim.ProtocolBody {
 	msg := m.GetMsg(cmd)
 	if msg == nil {
 		return nil
 	}
-	return msg.(protocol.ProtocolBody)
+	return msg.(meim.ProtocolBody)
 }
 
 func newTypeData(t reflect.Type) interface{} {

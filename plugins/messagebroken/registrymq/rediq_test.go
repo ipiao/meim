@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/ipiao/meim/plugins/protocol/datacreator"
+	"github.com/ipiao/meim/plugins/dc"
 )
 
 func TestRediQ(t *testing.T) {
@@ -17,7 +17,7 @@ func TestRediQ(t *testing.T) {
 		Node:     1,
 		Channels: ChannelPub | ChannelSub,
 	}
-	dc := datacreator.NewDataCreator()
+	dc := dc.NewDataCreator()
 	mq := NewRabbitBroken(mqcfg, dc, nil)
 
 	rmb := NewRegisterMQ(redi, mq)

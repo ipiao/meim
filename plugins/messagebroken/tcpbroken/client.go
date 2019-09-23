@@ -3,13 +3,13 @@ package tcpbroken
 import (
 	"net"
 
+	"github.com/ipiao/meim"
 	"github.com/ipiao/meim/log"
-	"github.com/ipiao/meim/protocol"
 )
 
 type Client struct {
 	name  string
-	wt    chan *protocol.InternalMessage
+	wt    chan *meim.InternalMessage
 	conn  *net.TCPConn
 	route *Route
 }
@@ -19,7 +19,7 @@ func NewClient(conn *net.TCPConn) *Client {
 	client := new(Client)
 	client.name = conn.RemoteAddr().String()
 	client.conn = conn
-	client.wt = make(chan *protocol.InternalMessage, 16)
+	client.wt = make(chan *meim.InternalMessage, 16)
 	client.route = NewRoute()
 	return client
 }
@@ -39,7 +39,7 @@ func (client *Client) Read() {
 }
 
 // 实际消息处理
-func (client *Client) HandleMessage(msg *protocol.InternalMessage) {
+func (client *Client) HandleMessage(msg *meim.InternalMessage) {
 	cmd := msg.Header.Cmd()
 	log.Infof("client: %s handle msg cmd: %d", client.name, cmd)
 	switch cmd {
@@ -65,7 +65,7 @@ func (client *Client) HandleUnsubscribe(uid int64) {
 }
 
 // 处理发布单聊消息
-func (client *Client) HandlePublish(msg *protocol.InternalMessage) {
+func (client *Client) HandlePublish(msg *meim.InternalMessage) {
 	cmd := msg.Header.Cmd()
 	log.Infof("client: %s publish message uid:%d cmd:%s", client.name, msg.Receiver, cmd)
 
@@ -109,12 +109,12 @@ func (client *Client) Run() {
 	go client.Push()
 }
 
-func (client *Client) read() (*protocol.InternalMessage, error) {
-	return protocol.ReadInternalMessage(client.conn, DC)
+func (client *Client) read() (*meim.InternalMessage, error) {
+	return meim.ReadInternalMessage(client.conn, DC)
 }
 
-func (client *Client) send(msg *protocol.InternalMessage) error {
-	return protocol.WriteInternalMessage(client.conn, msg)
+func (client *Client) send(msg *meim.InternalMessage) error {
+	return meim.WriteInternalMessage(client.conn, msg)
 }
 
 func (client *Client) close() {

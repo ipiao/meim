@@ -5,15 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"time"
-	"xinxin/1v1_micro/libs/util"
 
 	"github.com/google/uuid"
+	"github.com/ipiao/meim"
 	"github.com/ipiao/meim/log"
-	"github.com/ipiao/meim/protocol"
+	"github.com/ipiao/meim/util"
 	"github.com/streadway/amqp"
 )
 
-type RPCHandler func(*protocol.InternalMessage) *protocol.InternalMessage
+type RPCHandler func(*meim.InternalMessage) *meim.InternalMessage
 
 const (
 	ChannelPub = 1 << iota
@@ -60,7 +60,7 @@ func (cfg *RabbitBrokenConfig) init() {
 // 用户rpc操作的请求结构
 type request struct {
 	node int
-	msg  *protocol.InternalMessage
+	msg  *meim.InternalMessage
 	ret  chan []byte
 }
 
@@ -68,15 +68,15 @@ type request struct {
 type RabbitBroken struct {
 	cancel         context.CancelFunc
 	cfg            *RabbitBrokenConfig
-	pubMessageChan chan *request                  // pub message
-	rpcRequestChan chan *request                  // rpc message
-	subMessageChan chan *protocol.InternalMessage // sub message
+	pubMessageChan chan *request              // pub message
+	rpcRequestChan chan *request              // rpc message
+	subMessageChan chan *meim.InternalMessage // sub message
 	rpcHandler     RPCHandler
-	dc             protocol.DataCreator
+	dc             meim.DataCreator
 }
 
 // 新建rabbot通道,参数需要给定
-func NewRabbitBroken(cfg *RabbitBrokenConfig, dc protocol.DataCreator, rpcHandler RPCHandler) *RabbitBroken {
+func NewRabbitBroken(cfg *RabbitBrokenConfig, dc meim.DataCreator, rpcHandler RPCHandler) *RabbitBroken {
 	cfg.init()
 
 	ctx, done := context.WithCancel(context.Background())
@@ -92,7 +92,7 @@ func NewRabbitBroken(cfg *RabbitBrokenConfig, dc protocol.DataCreator, rpcHandle
 			log.Fatal("sub broken must set DataCreator")
 		}
 		go func() {
-			rb.subMessageChan = make(chan *protocol.InternalMessage, cfg.Chansize)
+			rb.subMessageChan = make(chan *meim.InternalMessage, cfg.Chansize)
 			rb.subscribe(redial(ctx, cfg.Url, rb.cfg.ExchangeName, rb.cfg.ExchangeKind))
 			done()
 		}()
@@ -348,22 +348,22 @@ func (rb *RabbitBroken) getRpcBindKey() string {
 }
 
 // 路由key
-func (rb *RabbitBroken) getRoutingKey(node int, message *protocol.InternalMessage) string {
+func (rb *RabbitBroken) getRoutingKey(node int, message *meim.InternalMessage) string {
 	return fmt.Sprintf("%s.%d.%d", rb.cfg.QueuePrefix, node, message.Receiver)
 }
 
 // 路由key
-func (rb *RabbitBroken) getRpcRoutingKey(node int, message *protocol.InternalMessage) string {
+func (rb *RabbitBroken) getRpcRoutingKey(node int, message *meim.InternalMessage) string {
 	return fmt.Sprintf("%s_rpc.%d.%d", rb.cfg.QueuePrefix, node, message.Receiver)
 }
 
-func (rb *RabbitBroken) encodeMessage(msg *protocol.InternalMessage) []byte {
-	b, _ := protocol.MarshalInternalMessage(msg)
+func (rb *RabbitBroken) encodeMessage(msg *meim.InternalMessage) []byte {
+	b, _ := meim.EncodeInternalMessage(msg)
 	return b
 }
 
-func (rb *RabbitBroken) decodeMessage(body []byte) *protocol.InternalMessage {
-	message, err := protocol.UnmarshalInternalMessgae(body, rb.dc)
+func (rb *RabbitBroken) decodeMessage(body []byte) *meim.InternalMessage {
+	message, err := meim.DecodeInternalMessgae(body, rb.dc)
 	if err != nil {
 		return nil
 	}
@@ -376,7 +376,7 @@ func (rb *RabbitBroken) Node() int {
 
 // 异步发送消息
 // 异步发送消息
-func (rb *RabbitBroken) SendMessage(node int, msg *protocol.InternalMessage) error {
+func (rb *RabbitBroken) SendMessage(node int, msg *meim.InternalMessage) error {
 	if rb.pubMessageChan == nil {
 		return errors.New("not registered")
 	}
@@ -406,7 +406,7 @@ func (rb *RabbitBroken) SendMessage(node int, msg *protocol.InternalMessage) err
 
 // rpc 服务调用
 // 同步发送等待返回
-func (rb *RabbitBroken) SyncMessage(node int, msg *protocol.InternalMessage) (*protocol.InternalMessage, error) {
+func (rb *RabbitBroken) SyncMessage(node int, msg *meim.InternalMessage) (*meim.InternalMessage, error) {
 	log.Debugf("[rabbit] SyncMessage: node->%s: %+v", node, msg)
 	if msg == nil {
 		return nil, errors.New("nil message")
@@ -426,7 +426,7 @@ func (rb *RabbitBroken) SyncMessage(node int, msg *protocol.InternalMessage) (*p
 }
 
 // 返回接收通道
-func (rb *RabbitBroken) ReceiveMessage() *protocol.InternalMessage {
+func (rb *RabbitBroken) ReceiveMessage() *meim.InternalMessage {
 	return <-rb.subMessageChan
 }
 

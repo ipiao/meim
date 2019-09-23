@@ -1,11 +1,11 @@
-package server
+package meim
 
 import (
 	"crypto/tls"
 	"time"
 )
 
-// OptionFn configures options of server.
+// OptionFn 对服务的参数进行插入式配置
 type OptionFn func(*Server)
 
 // WithOptions sets multiple options.
@@ -21,9 +21,9 @@ func WithOptions(ops map[string]interface{}) OptionFn {
 }
 
 // WithTLSConfig sets tls.Config.
-func WithTLSConfig(tlscfg *tls.Config) OptionFn {
+func WithTLSConfig(cfg *tls.Config) OptionFn {
 	return func(s *Server) {
-		s.lncfg.TLSConfig = tlscfg
+		s.lncfg.TLSConfig = cfg
 	}
 }
 
@@ -38,6 +38,13 @@ func WithReadTimeout(readTimeout time.Duration) OptionFn {
 func WithWriteTimeout(writeTimeout time.Duration) OptionFn {
 	return func(s *Server) {
 		s.writeTimeout = writeTimeout
+	}
+}
+
+// WithMaxConn sets maxConn.
+func WithMaxConn(n int) OptionFn {
+	return func(s *Server) {
+		s.maxConn = n
 	}
 }
 

@@ -1,11 +1,11 @@
-package protocol
+package meim
 
 import (
 	"encoding/binary"
 	"io"
 )
 
-// 内部消息
+// 内部消息,服务之间或者组件之间进行消息交换
 type InternalMessage struct {
 	Message         // 发送的消息体
 	Sender    int64 // 发送人
@@ -14,7 +14,7 @@ type InternalMessage struct {
 }
 
 func WriteInternalMessage(conn io.Writer, msg *InternalMessage) error {
-	data, err := MarshalInternalMessage(msg)
+	data, err := EncodeInternalMessage(msg)
 	if err != nil {
 		return err
 	}
@@ -22,7 +22,7 @@ func WriteInternalMessage(conn io.Writer, msg *InternalMessage) error {
 	return err
 }
 
-func MarshalInternalMessage(message *InternalMessage) ([]byte, error) {
+func EncodeInternalMessage(message *InternalMessage) ([]byte, error) {
 	if message.Header == nil {
 		return nil, ErrorInvalidHeader
 	}
@@ -54,8 +54,8 @@ func MarshalInternalMessage(message *InternalMessage) ([]byte, error) {
 	return buffer.Bytes(), nil
 }
 
-// 编码Message
-func UnmarshalInternalMessgae(b []byte, dc DataCreator) (*InternalMessage, error) {
+// 解码
+func DecodeInternalMessgae(b []byte, dc DataCreator) (*InternalMessage, error) {
 	message := new(InternalMessage)
 	message.Header = dc.CreateHeader()
 

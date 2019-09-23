@@ -5,19 +5,20 @@ import (
 	"net"
 	"time"
 
+	"github.com/ipiao/meim"
+
 	"github.com/ipiao/meim/log"
-	"github.com/ipiao/meim/protocol"
 )
 
 type TCPBrokenClient struct {
 	addr     string
-	dc       protocol.DataCreator
+	dc       meim.DataCreator
 	conn     net.Conn
 	subCmd   int
 	unsubCmd int
 }
 
-func NewTCPRouterClient(addr string, dc protocol.DataCreator, subCmd, unsubCmd int) *TCPBrokenClient {
+func NewTCPRouterClient(addr string, dc meim.DataCreator, subCmd, unsubCmd int) *TCPBrokenClient {
 	tr := &TCPBrokenClient{
 		addr: addr,
 		dc:   dc,
@@ -48,25 +49,25 @@ func (tr *TCPBrokenClient) Connect() {
 	}
 }
 
-func (tr *TCPBrokenClient) SyncMessage(msg *protocol.InternalMessage) (*protocol.InternalMessage, error) {
+func (tr *TCPBrokenClient) SyncMessage(msg *meim.InternalMessage) (*meim.InternalMessage, error) {
 	log.Warn("unsupported operation: SyncMessage")
 	return nil, errors.New("SyncMessage not supported")
 }
 
-func (tr *TCPBrokenClient) SendMessage(msg *protocol.InternalMessage) error {
-	data, err := protocol.MarshalInternalMessage(msg)
+func (tr *TCPBrokenClient) SendMessage(msg *meim.InternalMessage) error {
+	data, err := meim.EncodeInternalMessage(msg)
 	if err == nil {
 		_, err = tr.conn.Write(data)
 	}
 	return err
 }
 
-func (tr *TCPBrokenClient) ReceiveMessage() (*protocol.InternalMessage, error) {
-	return protocol.ReadInternalMessage(tr.conn, tr.dc)
+func (tr *TCPBrokenClient) ReceiveMessage() (*meim.InternalMessage, error) {
+	return meim.ReadInternalMessage(tr.conn, tr.dc)
 }
 
 func (tr *TCPBrokenClient) Subscribe(uid int64) {
-	msg := new(protocol.InternalMessage)
+	msg := new(meim.InternalMessage)
 	msg.Header = tr.dc.CreateHeader()
 	msg.Header.SetCmd(tr.subCmd)
 	msg.Sender = uid
@@ -74,7 +75,7 @@ func (tr *TCPBrokenClient) Subscribe(uid int64) {
 }
 
 func (tr *TCPBrokenClient) UnSubscribe(uid int64) {
-	msg := new(protocol.InternalMessage)
+	msg := new(meim.InternalMessage)
 	msg.Header = tr.dc.CreateHeader()
 	msg.Header.SetCmd(tr.unsubCmd)
 	msg.Sender = uid

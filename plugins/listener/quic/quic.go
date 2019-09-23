@@ -4,15 +4,15 @@ import (
 	"errors"
 	"net"
 
-	"github.com/ipiao/meim/server"
+	"github.com/ipiao/meim"
 	quicconn "github.com/marten-seemann/quic-conn"
 )
 
 func init() {
-	server.RegisterMakeListener("quic", quicMakeListener)
+	meim.RegisterMakeListener("quic", quicMakeListener)
 }
 
-func quicMakeListener(cfg *server.ListenerConfig) (ln net.Listener, err error) {
+func quicMakeListener(cfg *meim.ListenerConfig) (ln net.Listener, err error) {
 	if cfg.TLSConfig == nil {
 		return nil, errors.New("TLSConfig must be configured in cfg.Options")
 	}

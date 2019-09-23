@@ -1,4 +1,4 @@
-package server
+package meim
 
 import (
 	"fmt"
@@ -13,26 +13,26 @@ import (
 )
 
 const (
-	DEFAULT_READ_TIMEOUT  = time.Minute * 15
-	DEFAULT_WRITE_TIMEOUT = time.Second * 10
-	DEFAULT_MAX_CONNNUM   = 65536
+	DefaultReadTimeout  = time.Minute * 15
+	DefaultWriteTimeout = time.Second * 10
+	DefaultMaxConn      = 65536
 )
 
-// 服务
+// Server 提供一个连接服务
 type Server struct {
 	lncfg        *ListenerConfig // 配置
 	ln           net.Listener    // 单一服务监听
 	readTimeout  time.Duration   // 读超时
 	writeTimeout time.Duration   // 写超时
-	maxConnNum   int             // 限制最大连接数
+	maxConn      int             // 限制最大连接数
 
-	mu      sync.RWMutex // 锁
-	conns   ConnSet      // 客户端集
-	connsMu sync.RWMutex // 客户端锁
+	mu        sync.RWMutex // 锁
+	clients   ClientSet    // 客户端集
+	clientsMu sync.RWMutex // 客户端锁
 
-	closeSig chan bool      // 服务结束信号
-	wgLn     sync.WaitGroup // listener的等待组
-	wgConns  sync.WaitGroup // clients的等待组
+	closeSig  chan bool      // 服务结束信号
+	wgLn      sync.WaitGroup // listener的等待组
+	wgClients sync.WaitGroup // clients的等待组
 
 }
 
@@ -61,17 +61,17 @@ func (s *Server) init() {
 		}
 	}
 	if s.readTimeout == 0 {
-		s.readTimeout = DEFAULT_READ_TIMEOUT
+		s.readTimeout = DefaultReadTimeout
 	}
 	if s.writeTimeout == 0 {
-		s.writeTimeout = DEFAULT_WRITE_TIMEOUT
+		s.writeTimeout = DefaultWriteTimeout
 	}
-	if s.maxConnNum == 0 {
-		s.maxConnNum = DEFAULT_MAX_CONNNUM
+	if s.maxConn == 0 {
+		s.maxConn = DefaultMaxConn
 	}
 
-	if s.conns == nil {
-		s.conns = NewConnSet()
+	if s.clients == nil {
+		s.clients = NewClientSet()
 	}
 
 	if s.closeSig == nil {
@@ -100,7 +100,7 @@ func (s *Server) makeListener() (ln net.Listener, err error) {
 }
 
 func (s *Server) Run() {
-	if exts == nil {
+	if ext == nil {
 		log.Fatalf("external plugin not set")
 	}
 
@@ -115,18 +115,21 @@ func (s *Server) Run() {
 
 	// 结束服务
 	<-s.closeSig
+	s.Close()
+}
 
+func (s *Server) Close() {
 	//关闭listener
 	s.closeListener()
-	// 处理ConnsClose
-	s.connsMu.Lock()
-	for conn := range s.conns {
-		exts.HandleCloseConn(conn)
+	// 处理ConnClose
+	s.clientsMu.Lock()
+	for client := range s.clients {
+		//client.Close()
+		client.conn.Close() //要直接断开连接
 	}
-	s.connsMu.Unlock()
-	s.wgConns.Wait()
-	log.Infof("wait all agent onclose done")
-
+	s.clientsMu.Unlock()
+	s.wgClients.Wait()
+	log.Infof("wait all client onclose done")
 }
 
 func (s *Server) serveListener() {
@@ -162,33 +165,39 @@ func (s *Server) serveListener() {
 
 // 处理连接
 func (s *Server) handleConn(conn net.Conn) {
-	s.connsMu.Lock()
+	s.clientsMu.Lock()
 	// 如果连接数量超过限制,直接返回
 	// 理论上在auth时候就要避免
-	if count := len(s.conns); count >= s.maxConnNum {
-		s.connsMu.Unlock()
+	if count := len(s.clients); count >= s.maxConn {
+		s.clientsMu.Unlock()
 		conn.Close()
 		log.Warnf("too many connections: %d", count)
 		return
 	}
 
 	netConn := NewNetConn(conn, s.readTimeout, s.writeTimeout)
+	client := NewClient(netConn)
+	s.clients.Add(client)
+	s.clientsMu.Unlock()
 
-	s.conns.Add(netConn)
-	s.connsMu.Unlock()
-	s.wgConns.Add(1)
+	s.wgClients.Add(1)
 	log.Debug("new conn: %s", conn.RemoteAddr())
 
 	go func() {
-		exts.HandleConnAccepted(netConn) // 这里面进行Conn消息收发处理等,阻塞
+		if !ext.HandleAuthClient(client) {
+			log.Errorf("client %s auth failed", client.Log())
+			return
+		} else {
+			client.Run() // 这里面进行Conn消息收发处理等,阻塞
+		}
 		// 阻塞条件结束
 		netConn.Close()
-		s.connsMu.Lock()
-		s.conns.Remove(netConn)
-		s.connsMu.Unlock()
+		s.clientsMu.Lock()
+		s.clients.Remove(client)
+		s.clientsMu.Unlock()
 
-		exts.HandleConnClosed(netConn)
-		s.wgConns.Done()
+		ext.HandleClientClosed(client)
+		s.wgClients.Done()
 	}()
 }
 
@@ -197,8 +206,8 @@ func (s *Server) closeListener() {
 	s.wgLn.Wait()
 }
 
-func (s *Server) ConnSet() ConnSet {
-	s.connsMu.RLock()
-	defer s.connsMu.RUnlock()
-	return s.conns.Clone()
+func (s *Server) ClientSet() ClientSet {
+	s.clientsMu.RLock()
+	defer s.clientsMu.RUnlock()
+	return s.clients.Clone()
 }

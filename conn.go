@@ -1,4 +1,4 @@
-package server
+package meim
 
 import (
 	"net"
@@ -62,42 +62,4 @@ func IsTimeout(err error) bool {
 		return e.Timeout()
 	}
 	return false
-}
-
-// 连接集合
-type ConnSet map[Conn]struct{}
-
-func NewConnSet() ConnSet {
-	return make(map[Conn]struct{})
-}
-
-func (set ConnSet) Add(c Conn) {
-	set[c] = struct{}{}
-}
-
-func (set ConnSet) IsMember(c Conn) bool {
-	if _, ok := set[c]; ok {
-		return true
-	}
-	return false
-}
-
-func (set ConnSet) Remove(c Conn) {
-	if _, ok := set[c]; !ok {
-		return
-	}
-	delete(set, c)
-}
-
-func (set ConnSet) Count() int {
-	return len(set)
-}
-
-// 只是浅复制
-func (set ConnSet) Clone() ConnSet {
-	n := make(map[Conn]struct{})
-	for k, v := range set {
-		n[k] = v
-	}
-	return n
 }

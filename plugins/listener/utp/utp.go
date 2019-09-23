@@ -4,13 +4,13 @@ import (
 	"net"
 
 	"github.com/anacrolix/utp"
-	"github.com/ipiao/meim/server"
+	"github.com/ipiao/meim"
 )
 
 func init() {
-	server.RegisterMakeListener("utp", utpMakeListener)
+	meim.RegisterMakeListener("utp", utpMakeListener)
 }
 
-func utpMakeListener(cfg *server.ListenerConfig) (ln net.Listener, err error) {
+func utpMakeListener(cfg *meim.ListenerConfig) (ln net.Listener, err error) {
 	return utp.Listen(cfg.Address)
 }

@@ -1,4 +1,4 @@
-package protocol
+package meim
 
 import (
 	"errors"
@@ -17,22 +17,45 @@ var (
 	bufPool = util.NewBufferPool()
 )
 
-// 有一个完整的消息包含头和body两部分
+// 协议数据,定义了数据基本交换协议
+// 头和body 都属于协议数据
+type ProtocolData interface {
+	Decode(b []byte) error   // 从字节中读取
+	Encode() ([]byte, error) // 编码
+}
+
+// 协议头
+type ProtocolHeader interface {
+	ProtocolData
+	Length() int
+	Cmd() int   // 协议指令
+	SetCmd(int) // 指定协议指令
+	BodyLength() int
+	SetBodyLength(n int)
+}
+
+// 协议数据内容
+type ProtocolBody = ProtocolData
+
+// 一个完整的消息包含头和body两部分
 type Message struct {
 	Header ProtocolHeader
 	Body   ProtocolBody
 }
 
+// 协议数据创建器,可以分别创建头和body
+// 定义DataCreator的作用之一是,在必要的时候,可以对不同的客户端使用不同的数据交换协议
 type DataCreator interface {
 	CreateHeader() ProtocolHeader
 	CreateBody(cmd int) ProtocolBody
 }
 
+// 不限制读
 func ReadMessage(reader io.Reader, dc DataCreator) (*Message, error) {
 	return ReadLimitMessage(reader, dc, 0)
 }
 
-// 给定消息结构读取
+// 限制读
 func ReadLimitMessage(reader io.Reader, dc DataCreator, limitSize int) (*Message, error) {
 	header := dc.CreateHeader()
 
@@ -66,8 +89,8 @@ func ReadLimitMessage(reader io.Reader, dc DataCreator, limitSize int) (*Message
 	return &Message{Header: header, Body: body}, err
 }
 
-// 编码Message
-func UnmarshalMessgae(b []byte, dc DataCreator) (*Message, error) {
+// 解码字节流
+func DecodeMessage(b []byte, dc DataCreator) (*Message, error) {
 	message := &Message{
 		Header: dc.CreateHeader(),
 	}
@@ -96,11 +119,12 @@ func WriteMessage(conn io.Writer, message *Message) error {
 	return WriteLimitMessage(conn, message, 0) // unlimited
 }
 
+// 限制写
 func WriteLimitMessage(conn io.Writer, message *Message, limitSize int) error {
 	if message.Header == nil {
 		return ErrorInvalidMessage
 	}
-	data, err := MarshalLimitMessgae(message, limitSize)
+	data, err := EncodeLimitMessage(message, limitSize)
 	if err != nil {
 		return err
 	}
@@ -108,7 +132,8 @@ func WriteLimitMessage(conn io.Writer, message *Message, limitSize int) error {
 	return err
 }
 
-func MarshalLimitMessgae(message *Message, limitSize int) ([]byte, error) {
+// 限制编码消息
+func EncodeLimitMessage(message *Message, limitSize int) ([]byte, error) {
 	if message.Header == nil {
 		return nil, ErrorInvalidHeader
 	}
@@ -139,6 +164,6 @@ func MarshalLimitMessgae(message *Message, limitSize int) ([]byte, error) {
 }
 
 // 编码Message
-func MarshalMessgae(message *Message) ([]byte, error) {
-	return MarshalLimitMessgae(message, 0)
+func EncodeMessage(message *Message) ([]byte, error) {
+	return EncodeLimitMessage(message, 0)
 }

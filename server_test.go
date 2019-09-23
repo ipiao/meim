@@ -1,4 +1,4 @@
-package server
+package meim
 
 import (
 	"net"
@@ -15,7 +15,7 @@ func TestServer(t *testing.T) {
 	}
 
 	s := NewServerWithConfig(lncfg)
-	SetExternalPlugin(&plugins{})
+	SetExternalPlugin(NewExternalImp())
 	s.Run()
 }
 

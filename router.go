@@ -1,4 +1,4 @@
-package gate
+package meim
 
 // 单机,本地的用户路由
 
@@ -8,9 +8,10 @@ import (
 	"github.com/ipiao/meim/log"
 )
 
+// Router 进行用户客户端管理/查找的路由服务
 type Router struct {
-	mu      sync.RWMutex
-	clients map[int64]ClientSet // 这个必须有userId
+	mu      sync.RWMutex        //
+	clients map[int64]ClientSet // 这个必须有userId,和server.clients的生存周期有所不同
 }
 
 func NewRouter() *Router {
@@ -20,8 +21,12 @@ func NewRouter() *Router {
 }
 
 // uid 已经设置的情况下才可调用
-//
+// 不允许uid为0
 func (route *Router) AddClient(client *Client) {
+	if client.UID == 0 {
+		log.Warnf("router add invalid client %s", client.Log())
+		return
+	}
 	route.mu.Lock()
 	defer route.mu.Unlock()
 	set, ok := route.clients[client.UID]
@@ -42,7 +47,7 @@ func (route *Router) RemoveClient(client *Client) bool {
 		}
 		return true
 	}
-	log.Infof("client non exists, %s", client.Log())
+	log.Infof("router client non exists, %s", client.Log())
 	return false
 }
 
@@ -58,6 +63,20 @@ func (route *Router) FindClientSet(uid int64) ClientSet {
 	}
 }
 
+// FindClient 只查找一个client
+func (route *Router) FindClient(uid int64) *Client {
+	route.mu.RLock()
+	defer route.mu.RUnlock()
+
+	set, ok := route.clients[uid]
+	if ok {
+		for c := range set {
+			return c
+		}
+	}
+	return nil
+}
+
 func (route *Router) IsOnline(uid int64) bool {
 	route.mu.RLock()
 	defer route.mu.RUnlock()
@@ -67,41 +86,4 @@ func (route *Router) IsOnline(uid int64) bool {
 		return len(set) > 0
 	}
 	return false
-}
-
-type ClientSet map[*Client]struct{}
-
-func NewClientSet() ClientSet {
-	return make(map[*Client]struct{})
-}
-
-func (set ClientSet) Add(c *Client) {
-	set[c] = struct{}{}
-}
-
-func (set ClientSet) IsMember(c *Client) bool {
-	if _, ok := set[c]; ok {
-		return true
-	}
-	return false
-}
-
-func (set ClientSet) Remove(c *Client) {
-	if _, ok := set[c]; !ok {
-		return
-	}
-	delete(set, c)
-}
-
-func (set ClientSet) Count() int {
-	return len(set)
-}
-
-// 只是浅复制
-func (set ClientSet) Clone() ClientSet {
-	n := make(map[*Client]struct{})
-	for k, v := range set {
-		n[k] = v
-	}
-	return n
 }

@@ -3,7 +3,7 @@ package registrymq
 import (
 	"errors"
 
-	"github.com/ipiao/meim/protocol"
+	"github.com/ipiao/meim"
 )
 
 var (
@@ -26,9 +26,9 @@ type Registry interface {
 
 type MQBroken interface {
 	Node() int
-	ReceiveMessage() *protocol.InternalMessage
-	SendMessage(node int, msg *protocol.InternalMessage) error
-	SyncMessage(node int, msg *protocol.InternalMessage) (*protocol.InternalMessage, error)
+	ReceiveMessage() *meim.InternalMessage
+	SendMessage(node int, msg *meim.InternalMessage) error
+	SyncMessage(node int, msg *meim.InternalMessage) (*meim.InternalMessage, error)
 	Close()
 }
 
@@ -42,7 +42,7 @@ func (tr *RegisterMQ) UnSubscribe(uid int64) {
 	tr.reg.DeRegister(uid)
 }
 
-func (tr *RegisterMQ) SendMessage(msg *protocol.InternalMessage) error {
+func (tr *RegisterMQ) SendMessage(msg *meim.InternalMessage) error {
 	node := tr.reg.GetUserNode(msg.Receiver)
 	if node == 0 {
 		return ErrorUserNodeNotFound
@@ -50,11 +50,11 @@ func (tr *RegisterMQ) SendMessage(msg *protocol.InternalMessage) error {
 	return tr.mq.SendMessage(node, msg)
 }
 
-func (tr *RegisterMQ) ReceiveMessage() (*protocol.InternalMessage, error) {
+func (tr *RegisterMQ) ReceiveMessage() (*meim.InternalMessage, error) {
 	return tr.mq.ReceiveMessage(), nil
 }
 
-func (tr *RegisterMQ) SyncMessage(msg *protocol.InternalMessage) (*protocol.InternalMessage, error) {
+func (tr *RegisterMQ) SyncMessage(msg *meim.InternalMessage) (*meim.InternalMessage, error) {
 	node := tr.reg.GetUserNode(msg.Receiver)
 	if node == 0 {
 		return nil, ErrorUserNodeNotFound

@@ -1,11 +1,11 @@
-package datacreator
+package dc
 
 import (
 	"reflect"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/ipiao/meim"
 	"github.com/ipiao/meim/log"
-	"github.com/ipiao/meim/protocol"
 )
 
 // proto.Message
@@ -60,7 +60,7 @@ func (m *ProtoDataCreator) Clone() *ProtoDataCreator {
 	}
 }
 
-func (m *ProtoDataCreator) CreateBody(cmd int) protocol.ProtocolBody {
+func (m *ProtoDataCreator) CreateBody(cmd int) meim.ProtocolBody {
 	msg := m.GetMsg(cmd)
 	if msg == nil {
 		return nil

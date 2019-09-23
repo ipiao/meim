@@ -7,8 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ipiao/meim/protocol"
-
+	"github.com/ipiao/meim"
 	"github.com/ipiao/meim/log"
 )
 
@@ -17,7 +16,7 @@ var (
 	clientsMutex sync.RWMutex // clients的全局锁
 	Subcmd       int
 	Unsubcmd     int
-	DC           protocol.DataCreator
+	DC           meim.DataCreator
 )
 
 //新增
