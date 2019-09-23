@@ -1,5 +1,7 @@
 package meim
 
+// 服务应该会用到的组件,插件
+
 // 分布式用户消息交换路由
 type MessageBroken interface {
 	Connect()                                                   // 连接
@@ -9,6 +11,11 @@ type MessageBroken interface {
 	ReceiveMessage() (*InternalMessage, error)                  // 接收消息
 	SyncMessage(msg *InternalMessage) (*InternalMessage, error) // 同步消息请求
 	Close()
+}
+
+// 消息推送,作为附属
+type Pusher interface {
+	PushMessage(msg *InternalMessage)
 }
 
 // 本地消息分发,外部发送到本服务的消息
@@ -25,12 +32,6 @@ type Publisher interface {
 type MessageExchanger interface {
 	Dispatcher
 	Publisher
-	MessageBroken
-}
-
-// 消息推送,作为附属
-type Pusher interface {
-	PushMessage(msg *InternalMessage)
 }
 
 // example

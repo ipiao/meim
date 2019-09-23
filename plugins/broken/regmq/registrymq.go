@@ -1,4 +1,4 @@
-package registrymq
+package regmq
 
 import (
 	"errors"

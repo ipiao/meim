@@ -1,4 +1,4 @@
-package tcpbroken
+package tcpb
 
 import (
 	"net"
