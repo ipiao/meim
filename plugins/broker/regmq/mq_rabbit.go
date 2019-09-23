@@ -30,7 +30,7 @@ type RabbitBrokerConfig struct {
 	Url          string
 	RPCTimeout   time.Duration
 	SendTimeout  time.Duration
-	Chansize     int
+	ChanSize     int
 	Channels     uint64
 	QueuePrefix  string // 队列前缀
 	Node         int
@@ -46,8 +46,8 @@ func (cfg *RabbitBrokerConfig) init() {
 	if cfg.RPCTimeout == 0 {
 		cfg.RPCTimeout = time.Second * 5
 	}
-	if cfg.Chansize == 0 {
-		cfg.Chansize = 512
+	if cfg.ChanSize == 0 {
+		cfg.ChanSize = 512
 	}
 	if cfg.QueuePrefix == "" {
 		cfg.QueuePrefix = "message"
@@ -92,7 +92,7 @@ func NewRabbitBroker(cfg *RabbitBrokerConfig, dc meim.DataCreator, rpcHandler RP
 			log.Fatal("sub Broker must set DataCreator")
 		}
 		go func() {
-			rb.subMessageChan = make(chan *meim.InternalMessage, cfg.Chansize)
+			rb.subMessageChan = make(chan *meim.InternalMessage, cfg.ChanSize)
 			rb.subscribe(redial(ctx, cfg.Url, rb.cfg.ExchangeName, rb.cfg.ExchangeKind))
 			done()
 		}()
@@ -100,7 +100,7 @@ func NewRabbitBroker(cfg *RabbitBrokerConfig, dc meim.DataCreator, rpcHandler RP
 
 	if cfg.Channels&ChannelPub != 0 {
 		go func() {
-			rb.pubMessageChan = make(chan *request, cfg.Chansize)
+			rb.pubMessageChan = make(chan *request, cfg.ChanSize)
 			rb.publish(redial(ctx, cfg.Url, rb.cfg.ExchangeName, rb.cfg.ExchangeKind))
 			done()
 		}()
@@ -120,7 +120,7 @@ func NewRabbitBroker(cfg *RabbitBrokerConfig, dc meim.DataCreator, rpcHandler RP
 	}
 	if cfg.Channels&ChannelRPC != 0 {
 		go func() {
-			rb.rpcRequestChan = make(chan *request, cfg.Chansize)
+			rb.rpcRequestChan = make(chan *request, cfg.ChanSize)
 			rb.rpc(redial(ctx, cfg.Url, rb.cfg.ExchangeName, rb.cfg.ExchangeKind))
 			done()
 		}()
@@ -421,7 +421,7 @@ func (rb *RabbitBroker) SyncMessage(node int, msg *meim.InternalMessage) (*meim.
 	case b := <-retChan:
 		return rb.decodeMessage(b), nil
 	case <-time.After(rb.cfg.RPCTimeout):
-		return nil, errors.New("syncmessage timeout")
+		return nil, errors.New("sync message timeout")
 	}
 }
 

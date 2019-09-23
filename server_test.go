@@ -4,8 +4,6 @@ import (
 	"net"
 	"testing"
 	"time"
-
-	"github.com/ipiao/meim/log"
 )
 
 func TestServer(t *testing.T) {
@@ -17,32 +15,6 @@ func TestServer(t *testing.T) {
 	s := NewServerWithConfig(lncfg)
 	SetExternalPlugin(NewExternalImp())
 	s.Run()
-}
-
-type plugins struct {
-	c map[Conn]chan struct{}
-}
-
-func (p *plugins) HandleConnAccepted(conn Conn) {
-	log.Info("conn accepted")
-	p.c[conn] = make(chan struct{})
-
-	go func() {
-		time.Sleep(time.Second * 3)
-		log.Info("3 seconds later...")
-		p.HandleCloseConn(conn)
-	}()
-
-	<-p.c[conn]
-}
-
-func (p *plugins) HandleConnClosed(conn Conn) {
-	log.Info("conn closed")
-}
-
-func (p *plugins) HandleCloseConn(conn Conn) {
-	log.Info("close conn")
-	p.c[conn] <- struct{}{}
 }
 
 func TestClient(t *testing.T) {
