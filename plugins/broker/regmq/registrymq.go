@@ -10,10 +10,10 @@ var (
 	ErrorUserNodeNotFound = errors.New("user node not found")
 )
 
-// Register-Broken
+// Register-Broker
 type RegisterMQ struct {
 	reg Registry //
-	mq  MQBroken //
+	mq  MQBroker //
 }
 
 // 注册登录
@@ -24,7 +24,7 @@ type Registry interface {
 	Close()
 }
 
-type MQBroken interface {
+type MQBroker interface {
 	Node() int
 	ReceiveMessage() *meim.InternalMessage
 	SendMessage(node int, msg *meim.InternalMessage) error
@@ -67,7 +67,7 @@ func (tr *RegisterMQ) Close() {
 	tr.mq.Close()
 }
 
-func NewRegisterMQ(reg Registry, mq MQBroken) *RegisterMQ {
+func NewRegisterMQ(reg Registry, mq MQBroker) *RegisterMQ {
 	return &RegisterMQ{
 		reg: reg,
 		mq:  mq,

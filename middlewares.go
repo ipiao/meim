@@ -2,8 +2,8 @@ package meim
 
 // 服务应该会用到的组件,插件
 
-// 分布式用户消息交换路由
-type MessageBroken interface {
+// 分布式用户消息交换
+type MessageBroker interface {
 	Connect()                                                   // 连接
 	Subscribe(uid int64)                                        // 注册用户
 	UnSubscribe(uid int64)                                      // 注销用户
@@ -36,7 +36,7 @@ type MessageExchanger interface {
 
 // example
 type ExchangerExample struct {
-	MessageBroken
+	MessageBroker
 	*Router
 	pusher Pusher
 }

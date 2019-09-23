@@ -10,7 +10,7 @@ import (
 	"github.com/ipiao/meim/log"
 )
 
-type TCPBrokenClient struct {
+type TCPBrokerClient struct {
 	addr     string
 	dc       meim.DataCreator
 	conn     net.Conn
@@ -18,15 +18,15 @@ type TCPBrokenClient struct {
 	unsubCmd int
 }
 
-func NewTCPRouterClient(addr string, dc meim.DataCreator, subCmd, unsubCmd int) *TCPBrokenClient {
-	tr := &TCPBrokenClient{
+func NewTCPRouterClient(addr string, dc meim.DataCreator, subCmd, unsubCmd int) *TCPBrokerClient {
+	tr := &TCPBrokerClient{
 		addr: addr,
 		dc:   dc,
 	}
 	return tr
 }
 
-func (tr *TCPBrokenClient) Connect() {
+func (tr *TCPBrokerClient) Connect() {
 	nsleep := 100
 	for {
 		conn, err := net.Dial("tcp", tr.addr)
@@ -49,12 +49,12 @@ func (tr *TCPBrokenClient) Connect() {
 	}
 }
 
-func (tr *TCPBrokenClient) SyncMessage(msg *meim.InternalMessage) (*meim.InternalMessage, error) {
+func (tr *TCPBrokerClient) SyncMessage(msg *meim.InternalMessage) (*meim.InternalMessage, error) {
 	log.Warn("unsupported operation: SyncMessage")
 	return nil, errors.New("SyncMessage not supported")
 }
 
-func (tr *TCPBrokenClient) SendMessage(msg *meim.InternalMessage) error {
+func (tr *TCPBrokerClient) SendMessage(msg *meim.InternalMessage) error {
 	data, err := meim.EncodeInternalMessage(msg)
 	if err == nil {
 		_, err = tr.conn.Write(data)
@@ -62,11 +62,11 @@ func (tr *TCPBrokenClient) SendMessage(msg *meim.InternalMessage) error {
 	return err
 }
 
-func (tr *TCPBrokenClient) ReceiveMessage() (*meim.InternalMessage, error) {
+func (tr *TCPBrokerClient) ReceiveMessage() (*meim.InternalMessage, error) {
 	return meim.ReadInternalMessage(tr.conn, tr.dc)
 }
 
-func (tr *TCPBrokenClient) Subscribe(uid int64) {
+func (tr *TCPBrokerClient) Subscribe(uid int64) {
 	msg := new(meim.InternalMessage)
 	msg.Header = tr.dc.CreateHeader()
 	msg.Header.SetCmd(tr.subCmd)
@@ -74,7 +74,7 @@ func (tr *TCPBrokenClient) Subscribe(uid int64) {
 	tr.SendMessage(msg)
 }
 
-func (tr *TCPBrokenClient) UnSubscribe(uid int64) {
+func (tr *TCPBrokerClient) UnSubscribe(uid int64) {
 	msg := new(meim.InternalMessage)
 	msg.Header = tr.dc.CreateHeader()
 	msg.Header.SetCmd(tr.unsubCmd)
@@ -82,6 +82,6 @@ func (tr *TCPBrokenClient) UnSubscribe(uid int64) {
 	tr.SendMessage(msg)
 }
 
-func (tr *TCPBrokenClient) Close() {
+func (tr *TCPBrokerClient) Close() {
 	tr.conn.Close()
 }
