@@ -21,13 +21,13 @@ func NewClient(conn server.Conn, dc protocol.DataCreator) *Client {
 	client.lmessages = list.New()
 	client.extch = make(chan func(*Client), 8)
 	client.enqueueTimeout = time.Second * 10
-	client.dc = dc
+	client.DC = dc
 	return nil
 }
 
 func (c *Client) read() {
 	for {
-		msg, err := protocol.ReadLimitMessage(c.Conn, c.dc, 128*1024)
+		msg, err := protocol.ReadLimitMessage(c.Conn, c.DC, 128*1024)
 		if err != nil {
 			log.Info("client read error:", err)
 			c.Close()
@@ -43,7 +43,7 @@ func (c *Client) write() {
 		select {
 		case msg := <-c.mch:
 			if msg == nil {
-				log.Infof("client:%d socket closed", c.uid)
+				log.Infof("client:%d socket closed", c.UID)
 				c.FlushMessage()
 				c.Conn.Close()
 				break

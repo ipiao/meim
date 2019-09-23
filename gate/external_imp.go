@@ -34,7 +34,7 @@ func (e *ExternalImp) HandleConnAccepted(conn server.Conn) {
 	e.mu.Unlock()
 
 	exts.HandleAuthClient(client)
-	if client.dc == nil {
+	if client.DC == nil {
 		log.Errorf("conn %s DC not set", client.Log())
 		return
 	}

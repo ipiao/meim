@@ -24,36 +24,20 @@ type Connection struct {
 	lmsch          chan int               // 长消息下发(信号),long message signal channel
 	lmessages      *list.List             // 长消息存储队列(非阻塞消息下发)
 	extch          chan func(*Client)     // 外部时间队列, external event channel
-	dc             protocol.DataCreator   //
 	mu             sync.Mutex             // 锁
 	enqueueTimeout time.Duration          // 消息/事件入队超时时间
 
-	uid      int64       // 用户id
-	userdata interface{} // 用户数据
-}
-
-func (c *Connection) SetUID(uid int64) {
-	c.uid = uid
-}
-
-func (c *Connection) SetUserData(ud interface{}) {
-	c.userdata = ud
-}
-
-func (c *Connection) UID() int64 {
-	return c.uid
-}
-
-func (c *Connection) UserData() interface{} {
-	return c.userdata
+	UID      int64                // 用户id
+	UserData interface{}          // 用户数据
+	DC       protocol.DataCreator //
 }
 
 func (c *Connection) Log() string {
-	return fmt.Sprintf("uid %d, addr %s", c.uid, c.Conn.RemoteAddr())
+	return fmt.Sprintf("uid %d, addr %s", c.UID, c.Conn.RemoteAddr())
 }
 
 func (c *Connection) String() string {
-	return fmt.Sprintf(" uid: %d, addr: %s, data: %+v", c.uid, c.Conn.RemoteAddr(), c.userdata)
+	return fmt.Sprintf(" uid: %d, addr: %s, data: %+v", c.UID, c.Conn.RemoteAddr(), c.UserData)
 }
 
 // 发送一般消息

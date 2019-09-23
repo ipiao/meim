@@ -24,10 +24,10 @@ func NewRouter() *Router {
 func (route *Router) AddClient(client *Client) {
 	route.mu.Lock()
 	defer route.mu.Unlock()
-	set, ok := route.clients[client.UID()]
+	set, ok := route.clients[client.UID]
 	if !ok {
 		set = NewClientSet()
-		route.clients[client.UID()] = set
+		route.clients[client.UID] = set
 	}
 	set.Add(client)
 }
@@ -35,10 +35,10 @@ func (route *Router) AddClient(client *Client) {
 func (route *Router) RemoveClient(client *Client) bool {
 	route.mu.Lock()
 	defer route.mu.Unlock()
-	if set, ok := route.clients[client.UID()]; ok {
+	if set, ok := route.clients[client.UID]; ok {
 		set.Remove(client)
 		if set.Count() == 0 {
-			delete(route.clients, client.UID())
+			delete(route.clients, client.UID)
 		}
 		return true
 	}
