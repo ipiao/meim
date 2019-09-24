@@ -7,7 +7,7 @@ import (
 
 // 内部消息,服务之间或者组件之间进行消息交换
 type InternalMessage struct {
-	Message         // 发送的消息体
+	*Message        // 发送的消息体
 	Sender    int64 // 发送人
 	Receiver  int64 // 接收人
 	Timestamp int64 // 时间戳,ms

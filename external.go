@@ -23,3 +23,7 @@ func SetExternalPlugin(plugin ExternalPlugin) {
 		ext = plugin
 	})
 }
+
+func HandleMessage(client *Client, msg *Message) {
+	ext.HandleMessage(client, msg)
+}

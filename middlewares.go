@@ -15,21 +15,22 @@ type MessageBroker interface {
 
 // 消息推送,作为附属
 type Pusher interface {
-	PushMessage(msg *InternalMessage)
+	PushMessage(msg *InternalMessage) bool
 }
 
 // 本地消息分发,外部发送到本服务的消息
 type Dispatcher interface {
-	DispatchMessage(*InternalMessage)
+	DispatchMessage(*InternalMessage) bool
 }
 
 // 进行消息发布
 type Publisher interface {
-	PublishMessage(*InternalMessage)
+	PublishMessage(*InternalMessage) bool
 }
 
 // 消息交换机
 type MessageExchanger interface {
+	MessageBroker
 	Dispatcher
 	Publisher
 }

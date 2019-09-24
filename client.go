@@ -166,6 +166,8 @@ func (client *Client) write() {
 			client.SendLMessages()
 			break
 
+		case fn := <-client.extch:
+			fn(client)
 		}
 	}
 }

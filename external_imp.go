@@ -41,6 +41,10 @@ func (e *ExternalImp) HandleAuthClient(client *Client) bool {
 	return true
 }
 
+func (e *ExternalImp) FindClientSet(uid int64) ClientSet {
+	return e.Router.FindClientSet(uid)
+}
+
 func (e *ExternalImp) HandleMessage(client *Client, msg *Message) {
 	if h, ok := e.handlers[msg.Header.Cmd()]; ok {
 		h(client, msg)
