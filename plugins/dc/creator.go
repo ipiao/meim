@@ -28,7 +28,7 @@ func (m *DataCreator) SetHeaderType(t reflect.Type) {
 	m.headerType = t
 }
 
-func (m *DataCreator) SetHeaderType2(header interface{}) {
+func (m *DataCreator) SetHeaderType2(header meim.ProtocolHeader) {
 	m.SetHeaderType(reflect.TypeOf(header))
 }
 
@@ -43,7 +43,7 @@ func (m *DataCreator) SetBodyCmd(cmd int, t reflect.Type, desc ...string) {
 	}
 }
 
-func (m *DataCreator) SetBodyCmd2(cmd int, body interface{}, desc ...string) {
+func (m *DataCreator) SetBodyCmd2(cmd int, body meim.ProtocolBody, desc ...string) {
 	t := reflect.TypeOf(body)
 	m.SetBodyCmd(cmd, t, desc...)
 }

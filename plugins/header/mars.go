@@ -1,6 +1,10 @@
 package header
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+
+	"github.com/ipiao/meim"
+)
 
 // wx mars header
 // 消息头部信息, 固定长度20
@@ -49,4 +53,14 @@ func (h *MarsHeader) BodyLength() int {
 
 func (h *MarsHeader) SetBodyLength(n int) {
 	h.BodyLen = uint32(n)
+}
+
+func (h *MarsHeader) Clone() meim.ProtocolHeader {
+	return &MarsHeader{
+		HeadLen: h.HeadLen,
+		Version: h.Version,
+		Command: h.Command,
+		Seq:     h.Seq,
+		BodyLen: h.BodyLen,
+	}
 }

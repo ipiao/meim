@@ -49,7 +49,7 @@ func (m *ProtoDataCreator) SetBodyCmd(cmd int, t reflect.Type, desc ...string) {
 }
 
 //
-func (m *ProtoDataCreator) SetBodyCmd2(cmd int, body interface{}, desc ...string) {
+func (m *ProtoDataCreator) SetBodyCmd2(cmd int, body proto.Message, desc ...string) {
 	t := reflect.TypeOf(body)
 	m.SetBodyCmd(cmd, t, desc...)
 }

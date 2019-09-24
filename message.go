@@ -32,6 +32,7 @@ type ProtocolHeader interface {
 	SetCmd(int) // 指定协议指令
 	BodyLength() int
 	SetBodyLength(n int)
+	Clone() ProtocolHeader
 }
 
 // 协议数据内容
