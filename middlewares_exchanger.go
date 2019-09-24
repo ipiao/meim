@@ -6,14 +6,15 @@ import (
 	"github.com/ipiao/meim/log"
 )
 
+// Exchanger is just a example
 // 消息交换机,处理消息的对内分发和对外分发
 // TODO add feedback for not dispatched or not published
 type Exchanger struct {
 	MessageBroker                                //
 	Pusher                                       //
 	InternalMessageHandler                       //
-	router                 *Router               // for example,取 ExternalImp的Router
 	pubCh                  chan *InternalMessage //
+	router                 *Router               // for example,取 ExternalImp的Router
 }
 
 func NewMessageExchanger(router *Router, broker MessageBroker, pusher Pusher, handler InternalMessageHandler) *Exchanger {
@@ -23,16 +24,16 @@ func NewMessageExchanger(router *Router, broker MessageBroker, pusher Pusher, ha
 	return &Exchanger{
 		MessageBroker:          broker,
 		Pusher:                 pusher,
-		router:                 router,
 		InternalMessageHandler: handler,
 		pubCh:                  make(chan *InternalMessage, 256),
+		router:                 router,
 	}
 }
 
 // 直接下发
 // 单纯的进行消息下发,未考虑业务消息
 func (exc *Exchanger) DispatchMessage(msg *InternalMessage) bool {
-	return exc.DispatchMessage(msg)
+	return exc.dispatchMessage(msg)
 }
 
 func (exc *Exchanger) dispatchMessage(msg *InternalMessage) bool {
@@ -42,15 +43,9 @@ func (exc *Exchanger) dispatchMessage(msg *InternalMessage) bool {
 	if client == nil {
 		return exc.PushMessage(msg)
 	} else {
-		go exc.DispatchClientMessage(client, msg)
+		go client.EnqueueMessage(msg.Message)
 		return true
 	}
-}
-
-// 对客户端直接下发
-func (exc *Exchanger) DispatchClientMessage(client *Client, msg *InternalMessage) bool {
-	go client.EnqueueMessage(msg.Message)
-	return true
 }
 
 // 发布消息到Broker
