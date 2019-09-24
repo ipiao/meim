@@ -1,5 +1,9 @@
 package meim
 
+import (
+	"github.com/ipiao/meim/log"
+)
+
 // 服务应该会用到的组件,插件
 
 // 分布式用户消息交换
@@ -18,6 +22,13 @@ type Pusher interface {
 	PushMessage(msg *InternalMessage) bool
 }
 
+type NopPusher struct{}
+
+func (p *NopPusher) PushMessage(msg *InternalMessage) bool {
+	log.Infof("msg %v not pushed", msg)
+	return false
+}
+
 // 本地消息分发,外部发送到本服务的消息
 type Dispatcher interface {
 	DispatchMessage(*InternalMessage) bool
@@ -28,9 +39,14 @@ type Publisher interface {
 	PublishMessage(*InternalMessage) bool
 }
 
+type InternalMessageHandler interface {
+	HandleInternalMessage(msg *InternalMessage) // 和Client不一样的地方
+}
+
 // 消息交换机
 type MessageExchanger interface {
 	MessageBroker
 	Dispatcher
 	Publisher
+	InternalMessageHandler
 }

@@ -24,6 +24,9 @@ func SetExternalPlugin(plugin ExternalPlugin) {
 	})
 }
 
-func HandleMessage(client *Client, msg *Message) {
-	ext.HandleMessage(client, msg)
+// 客户端消息处理入队
+func HandleClientMessage(client *Client, msg *Message) {
+	client.EnqueueEvent(func(c *Client) {
+		ext.HandleMessage(c, msg)
+	})
 }

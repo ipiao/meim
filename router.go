@@ -63,7 +63,7 @@ func (route *Router) FindClientSet(uid int64) ClientSet {
 	}
 }
 
-// FindClient 只查找一个client
+// FindClient 只查找一个在线client
 func (route *Router) FindClient(uid int64) *Client {
 	route.mu.RLock()
 	defer route.mu.RUnlock()
@@ -71,7 +71,9 @@ func (route *Router) FindClient(uid int64) *Client {
 	set, ok := route.clients[uid]
 	if ok {
 		for c := range set {
-			return c
+			if !c.closed.Load() {
+				return c
+			}
 		}
 	}
 	return nil
