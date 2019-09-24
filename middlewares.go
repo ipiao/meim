@@ -39,6 +39,7 @@ type Publisher interface {
 	PublishMessage(*InternalMessage) bool
 }
 
+// 这个涉及到离线用户的消息处理,只能由业务处理
 type InternalMessageHandler interface {
 	HandleInternalMessage(msg *InternalMessage) // 和Client不一样的地方
 }

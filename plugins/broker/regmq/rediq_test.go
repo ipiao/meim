@@ -16,7 +16,7 @@ func TestRediQ(t *testing.T) {
 		return fmt.Sprintf("USER_NODE:%d", uid)
 	}
 	redi := NewRedisRegistry2("127.0.0.1:6379", "", 1, keyFunc)
-	mqcfg := &RabbitBrokerConfig{
+	mqcfg := &RabbitMQConfig{
 		Url:      "amqp://scote:Be1sElJjlvDW@127.0.0.1:5672",
 		Node:     1,
 		Channels: ChannelPub | ChannelSub,

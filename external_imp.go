@@ -8,16 +8,18 @@ import (
 // example for ExternalPlugin
 //
 type ExternalImp struct {
-	*Router
+	//*Router
 	defaultHandler func(*Client, *Message)         // 当cmd处理函数未被注册时候,统一处理
 	handlers       map[int]func(*Client, *Message) // 处理函数,按cmd
 	onAuthClient   func(*Client) bool              // 处理客户端认证
 	onClientClosed func(*Client)                   //
+
+	//offHandler
 }
 
 func NewExternalImp() *ExternalImp {
 	return &ExternalImp{
-		Router:   NewRouter(),
+		//Router:   NewRouter(),
 		handlers: make(map[int]func(*Client, *Message)),
 	}
 }
@@ -41,9 +43,9 @@ func (e *ExternalImp) HandleAuthClient(client *Client) bool {
 	return true
 }
 
-func (e *ExternalImp) FindClientSet(uid int64) ClientSet {
-	return e.Router.FindClientSet(uid)
-}
+//func (e *ExternalImp) FindClientSet(uid int64) ClientSet {
+//	return e.Router.FindClientSet(uid)
+//}
 
 func (e *ExternalImp) HandleMessage(client *Client, msg *Message) {
 	if h, ok := e.handlers[msg.Header.Cmd()]; ok {
@@ -77,6 +79,13 @@ func (e *ExternalImp) SetMsgHandler(cmd int, h func(*Client, *Message)) {
 	e.handlers[cmd] = h
 }
 
+func (e *ExternalImp) SetDefauleHandler(h func(*Client, *Message)) {
+	if e.defaultHandler != nil {
+		log.Warnf("defaultHandler already set, will be replaced")
+	}
+	e.defaultHandler = h
+}
+
 func (e *ExternalImp) SetOnClientClosed(h func(*Client)) {
 	if e.onClientClosed != nil {
 		log.Warnf("onClientClosed already set, will be replaced")
@@ -86,7 +95,7 @@ func (e *ExternalImp) SetOnClientClosed(h func(*Client)) {
 
 func (e *ExternalImp) Copy() *ExternalImp {
 	return &ExternalImp{
-		Router:         e.Router,
+		//Router:         e.Router,
 		handlers:       e.handlers,
 		onAuthClient:   e.onAuthClient,
 		onClientClosed: e.onClientClosed,

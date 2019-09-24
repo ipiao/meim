@@ -24,7 +24,7 @@ const (
 )
 
 // rabbit配置
-type RabbitBrokerConfig struct {
+type RabbitMQConfig struct {
 	ExchangeName string
 	ExchangeKind string
 	Url          string
@@ -36,7 +36,7 @@ type RabbitBrokerConfig struct {
 	Node         int
 }
 
-func (cfg *RabbitBrokerConfig) init() {
+func (cfg *RabbitMQConfig) init() {
 	if cfg.ExchangeName == "" {
 		cfg.ExchangeName = "meim"
 	}
@@ -65,9 +65,9 @@ type request struct {
 }
 
 // 一个rabbit完整的Broker
-type RabbitBroker struct {
+type RabbitMQ struct {
 	cancel         context.CancelFunc
-	cfg            *RabbitBrokerConfig
+	cfg            *RabbitMQConfig
 	pubMessageChan chan *request              // pub message
 	rpcRequestChan chan *request              // rpc message
 	subMessageChan chan *meim.InternalMessage // sub message
@@ -76,11 +76,11 @@ type RabbitBroker struct {
 }
 
 // 新建rabbot通道,参数需要给定
-func NewRabbitBroker(cfg *RabbitBrokerConfig, dc meim.DataCreator, rpcHandler RPCHandler) *RabbitBroker {
+func NewRabbitMQ(cfg *RabbitMQConfig, dc meim.DataCreator, rpcHandler RPCHandler) *RabbitMQ {
 	cfg.init()
 
 	ctx, done := context.WithCancel(context.Background())
-	rb := &RabbitBroker{
+	rb := &RabbitMQ{
 		cancel:     done,
 		cfg:        cfg,
 		rpcHandler: rpcHandler,
@@ -130,7 +130,7 @@ func NewRabbitBroker(cfg *RabbitBrokerConfig, dc meim.DataCreator, rpcHandler RP
 }
 
 // 发送消息
-func (rb *RabbitBroker) publish(sessions chan chan session) {
+func (rb *RabbitMQ) publish(sessions chan chan session) {
 	for session := range sessions {
 		pub := <-session
 		if !pub.connected() {
@@ -169,7 +169,7 @@ func (rb *RabbitBroker) publish(sessions chan chan session) {
 }
 
 // 订阅消息
-func (rb *RabbitBroker) subscribe(sessions chan chan session) {
+func (rb *RabbitMQ) subscribe(sessions chan chan session) {
 
 	queue := rb.getQueueName()
 	for session := range sessions {
@@ -211,7 +211,7 @@ func (rb *RabbitBroker) subscribe(sessions chan chan session) {
 }
 
 // 开启rpc服务
-func (rb *RabbitBroker) rpcServer(sessions chan chan session) {
+func (rb *RabbitMQ) rpcServer(sessions chan chan session) {
 	rpcQueueName := rb.getRpcQueueName()
 	for session := range sessions {
 		rpc := <-session
@@ -260,7 +260,7 @@ func (rb *RabbitBroker) rpcServer(sessions chan chan session) {
 }
 
 // 发送消息
-func (rb *RabbitBroker) rpc(sessions chan chan session) {
+func (rb *RabbitMQ) rpc(sessions chan chan session) {
 	for session := range sessions {
 		rpc := <-session
 		var reqs = rb.rpcRequestChan
@@ -328,41 +328,41 @@ func (rb *RabbitBroker) rpc(sessions chan chan session) {
 }
 
 // 生成队列名
-func (rb *RabbitBroker) getQueueName() string {
+func (rb *RabbitMQ) getQueueName() string {
 	return fmt.Sprintf("%s_%d", rb.cfg.QueuePrefix, rb.cfg.Node)
 }
 
 // 队列绑定key
-func (rb *RabbitBroker) getBindKey() string {
+func (rb *RabbitMQ) getBindKey() string {
 	return fmt.Sprintf("%s.%d.*", rb.cfg.QueuePrefix, rb.cfg.Node)
 }
 
 // rpc队列名
-func (rb *RabbitBroker) getRpcQueueName() string {
+func (rb *RabbitMQ) getRpcQueueName() string {
 	return fmt.Sprintf("%s_rpc_%d", rb.cfg.QueuePrefix, rb.cfg.Node)
 }
 
 // 队列绑定key
-func (rb *RabbitBroker) getRpcBindKey() string {
+func (rb *RabbitMQ) getRpcBindKey() string {
 	return fmt.Sprintf("%s_rpc.%d.*", rb.cfg.QueuePrefix, rb.cfg.Node)
 }
 
 // 路由key
-func (rb *RabbitBroker) getRoutingKey(node int, message *meim.InternalMessage) string {
+func (rb *RabbitMQ) getRoutingKey(node int, message *meim.InternalMessage) string {
 	return fmt.Sprintf("%s.%d.%d", rb.cfg.QueuePrefix, node, message.Receiver)
 }
 
 // 路由key
-func (rb *RabbitBroker) getRpcRoutingKey(node int, message *meim.InternalMessage) string {
+func (rb *RabbitMQ) getRpcRoutingKey(node int, message *meim.InternalMessage) string {
 	return fmt.Sprintf("%s_rpc.%d.%d", rb.cfg.QueuePrefix, node, message.Receiver)
 }
 
-func (rb *RabbitBroker) encodeMessage(msg *meim.InternalMessage) []byte {
+func (rb *RabbitMQ) encodeMessage(msg *meim.InternalMessage) []byte {
 	b, _ := meim.EncodeInternalMessage(msg)
 	return b
 }
 
-func (rb *RabbitBroker) decodeMessage(body []byte) *meim.InternalMessage {
+func (rb *RabbitMQ) decodeMessage(body []byte) *meim.InternalMessage {
 	message, err := meim.DecodeInternalMessgae(body, rb.dc)
 	if err != nil {
 		return nil
@@ -370,13 +370,13 @@ func (rb *RabbitBroker) decodeMessage(body []byte) *meim.InternalMessage {
 	return message
 }
 
-func (rb *RabbitBroker) Node() int {
+func (rb *RabbitMQ) Node() int {
 	return rb.cfg.Node
 }
 
 // 异步发送消息
 // 异步发送消息
-func (rb *RabbitBroker) SendMessage(node int, msg *meim.InternalMessage) error {
+func (rb *RabbitMQ) SendMessage(node int, msg *meim.InternalMessage) error {
 	if rb.pubMessageChan == nil {
 		return errors.New("not registered")
 	}
@@ -406,7 +406,7 @@ func (rb *RabbitBroker) SendMessage(node int, msg *meim.InternalMessage) error {
 
 // rpc 服务调用
 // 同步发送等待返回
-func (rb *RabbitBroker) SyncMessage(node int, msg *meim.InternalMessage) (*meim.InternalMessage, error) {
+func (rb *RabbitMQ) SyncMessage(node int, msg *meim.InternalMessage) (*meim.InternalMessage, error) {
 	log.Debugf("[rabbit] SyncMessage: node->%s: %+v", node, msg)
 	if msg == nil {
 		return nil, errors.New("nil message")
@@ -426,12 +426,12 @@ func (rb *RabbitBroker) SyncMessage(node int, msg *meim.InternalMessage) (*meim.
 }
 
 // 返回接收通道
-func (rb *RabbitBroker) ReceiveMessage() *meim.InternalMessage {
+func (rb *RabbitMQ) ReceiveMessage() *meim.InternalMessage {
 	return <-rb.subMessageChan
 }
 
 // 关闭
-func (rb *RabbitBroker) Close() {
+func (rb *RabbitMQ) Close() {
 	if rb.cancel != nil {
 		rb.cancel()
 	}

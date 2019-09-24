@@ -13,6 +13,7 @@ type Conn interface {
 	Read([]byte) (int, error)
 	Write(b []byte) (int, error) // 写
 	RemoteAddr() net.Addr        // 远端地址
+	LocalAddr() net.Addr         // 本地地址
 	Close() error                // 关闭
 }
 
