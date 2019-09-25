@@ -54,3 +54,17 @@ func WithNetwork(network string) OptionFn {
 		s.lncfg.Network = network
 	}
 }
+
+// WithListenAddr sets listener addr.
+func WithListenAddr(addr string) OptionFn {
+	return func(s *Server) {
+		s.lncfg.Address = addr
+	}
+}
+
+// WithExternalPlugin sets server plugin
+func WithExternalPlugin(plugin ExternalPlugin) OptionFn {
+	return func(s *Server) {
+		s.plugin = plugin
+	}
+}

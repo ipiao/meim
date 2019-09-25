@@ -28,14 +28,6 @@ func NewExternalImp() *ExternalImp {
 	}
 }
 
-func (e *ExternalImp) HandleCloseClient(client *Client) {
-	client.Close()
-}
-
-func (e *ExternalImp) HandleConnClosed(client *Client) {
-	ext.HandleClientClosed(client)
-}
-
 func (e *ExternalImp) HandleAuthClient(client *Client) bool {
 	if e.onAuthClient == nil {
 		return false
@@ -46,10 +38,6 @@ func (e *ExternalImp) HandleAuthClient(client *Client) bool {
 	}
 	return true
 }
-
-//func (e *ExternalImp) FindClientSet(uid int64) ClientSet {
-//	return e.Router.FindClientSet(uid)
-//}
 
 func (e *ExternalImp) HandleMessage(client *Client, msg *Message) {
 	if h, ok := e.handlers[msg.Header.Cmd()]; ok {

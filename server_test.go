@@ -13,7 +13,8 @@ func TestServer(t *testing.T) {
 	}
 
 	s := NewServerWithConfig(lncfg)
-	SetExternalPlugin(NewExternalImp())
+	s.plugin = NewExternalImp()
+	//SetExternalPlugin(NewExternalImp())
 	s.Run()
 }
 

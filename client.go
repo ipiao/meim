@@ -25,6 +25,8 @@ type Client struct {
 	mu             sync.Mutex         // 锁
 	enqueueTimeout time.Duration      // 消息/事件入队超时时间
 
+	plugin ExternalPlugin
+
 	UID      int64       // 用户id
 	UserData interface{} // 用户其他私有数据
 	DC       DataCreator // 协议数据构建器
@@ -146,7 +148,7 @@ func (client *Client) read() {
 			client.Close()
 			break
 		}
-		ext.HandleMessage(client, msg)
+		client.plugin.HandleMessage(client, msg)
 	}
 }
 

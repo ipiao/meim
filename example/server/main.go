@@ -44,8 +44,7 @@ func main() {
 	}, DC, nil)
 	reg := regmq.NewRedisRegistry2("127.0.0.1", "6379", 1, "USER_NODE")
 	broker := regmq.NewRegisterMQ(reg, rabbit)
-	exc = meim.NewMessageExchanger(router, broker,
-		nil, &InternalMessageHandler{eimp})
+	exc = meim.NewMessageExchanger(broker, nil, &InternalMessageHandler{eimp}, router)
 
 	DC = dc.NewProtoDataCreator()
 	eimp = meim.NewExternalImp()

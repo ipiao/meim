@@ -36,6 +36,9 @@ func (m *DataCreator) SetBodyCmd(cmd int, t reflect.Type, desc ...string) {
 	if typ, ok := m.cmdType[cmd]; ok {
 		log.Warnf("body cmd %d has been set type %s, will be replaced by %s", cmd, typ, t)
 	}
+	if c, ok := m.typeCmd[t]; ok {
+		log.Warnf("body type %s has been set cmd %d, will be replaced by %d", t, c, cmd)
+	}
 	m.cmdType[cmd] = t
 	m.typeCmd[t] = cmd
 	if len(desc) > 0 {
@@ -48,15 +51,15 @@ func (m *DataCreator) SetBodyCmd2(cmd int, body meim.ProtocolBody, desc ...strin
 	m.SetBodyCmd(cmd, t, desc...)
 }
 
-func (m *DataCreator) GetCmd(t reflect.Type) int {
+func (m *DataCreator) GetCmd(t reflect.Type) (int, bool) {
 	cmd, ok := m.typeCmd[t]
 	if !ok {
 		log.Warnf("body %s doesnt set cmd", t)
 	}
-	return cmd
+	return cmd, ok
 }
 
-func (m *DataCreator) GetCmd2(body interface{}) int {
+func (m *DataCreator) GetCmd2(body interface{}) (int, bool) {
 	t := reflect.TypeOf(body)
 	return m.GetCmd(t)
 }

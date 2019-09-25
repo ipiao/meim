@@ -1,9 +1,5 @@
 package meim
 
-import (
-	"sync"
-)
-
 // 由具体业务实现的方法函数
 // must
 type ExternalPlugin interface {
@@ -12,21 +8,21 @@ type ExternalPlugin interface {
 	HandleClientClosed(*Client)      // 关闭客户端之后的处理
 }
 
-var (
-	ext     ExternalPlugin // ext = extension
-	extOnce sync.Once
-)
-
-// 只能调用一次
-func SetExternalPlugin(plugin ExternalPlugin) {
-	extOnce.Do(func() {
-		ext = plugin
-	})
-}
-
-// 客户端消息处理入队
-func HandleClientMessage(client *Client, msg *Message) {
-	client.EnqueueEvent(func(c *Client) {
-		ext.HandleMessage(c, msg)
-	})
-}
+//var (
+//	ext     ExternalPlugin // ext = extension
+//	extOnce sync.Once
+//)
+//
+//// 只能调用一次
+//func SetExternalPlugin(plugin ExternalPlugin) {
+//	extOnce.Do(func() {
+//		ext = plugin
+//	})
+//}
+//
+//// 客户端消息处理入队
+//func HandleClientMessage(client *Client, msg *Message) {
+//	client.EnqueueEvent(func(c *Client) {
+//		ext.HandleMessage(c, msg)
+//	})
+//}

@@ -34,6 +34,7 @@ type Server struct {
 	wgLn      sync.WaitGroup // listener的等待组
 	wgClients sync.WaitGroup // clients的等待组
 
+	plugin ExternalPlugin
 }
 
 // 新建服务
@@ -100,7 +101,7 @@ func (s *Server) makeListener() (ln net.Listener, err error) {
 }
 
 func (s *Server) Run() {
-	if ext == nil {
+	if s.plugin == nil {
 		log.Fatalf("external plugin not set")
 	}
 
@@ -177,6 +178,7 @@ func (s *Server) handleConn(conn net.Conn) {
 
 	netConn := NewNetConn(conn, s.readTimeout, s.writeTimeout)
 	client := NewClient(netConn)
+	client.plugin = s.plugin
 	s.clients.Add(client)
 	s.clientsMu.Unlock()
 
@@ -184,7 +186,7 @@ func (s *Server) handleConn(conn net.Conn) {
 	log.Debug("new conn: %s", conn.RemoteAddr())
 
 	go func() {
-		if !ext.HandleAuthClient(client) {
+		if !s.plugin.HandleAuthClient(client) {
 			log.Errorf("client %s auth failed", client.Log())
 			return
 		} else {
@@ -196,7 +198,7 @@ func (s *Server) handleConn(conn net.Conn) {
 		s.clients.Remove(client)
 		s.clientsMu.Unlock()
 
-		ext.HandleClientClosed(client)
+		s.plugin.HandleClientClosed(client)
 		s.wgClients.Done()
 	}()
 }
