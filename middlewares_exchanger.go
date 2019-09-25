@@ -17,7 +17,7 @@ type Exchanger struct {
 	router                 *Router               // for example,取 ExternalImp的Router
 }
 
-func NewMessageExchanger(router *Router, broker MessageBroker, pusher Pusher, handler InternalMessageHandler) *Exchanger {
+func NewMessageExchanger(broker MessageBroker, pusher Pusher, handler InternalMessageHandler, router *Router) *Exchanger {
 	if pusher == nil {
 		pusher = new(NopPusher)
 	}
@@ -39,6 +39,9 @@ func (exc *Exchanger) DispatchMessage(msg *InternalMessage) bool {
 func (exc *Exchanger) dispatchMessage(msg *InternalMessage) bool {
 	// TODO 使用goroutin池
 	// 用go避免阻塞
+	if exc.router == nil {
+		return false
+	}
 	client := exc.router.FindClient(msg.Receiver)
 	if client == nil {
 		return exc.PushMessage(msg)
@@ -102,6 +105,8 @@ func (exc *Exchanger) runOnce() {
 	defer exc.Close()
 	closedCh := make(chan bool)
 
-	go exc.handleRead(closedCh)
+	if exc.InternalMessageHandler != nil {
+		go exc.handleRead(closedCh)
+	}
 	exc.handleWrite(closedCh)
 }
