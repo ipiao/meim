@@ -6,6 +6,7 @@ import (
 )
 
 // 内部消息,服务之间或者组件之间进行消息交换
+// example
 type InternalMessage struct {
 	*Message        // 发送的消息体
 	Sender    int64 // 发送人

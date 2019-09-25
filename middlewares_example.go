@@ -33,10 +33,6 @@ func NewMessageExchanger(broker MessageBroker, pusher Pusher, handler InternalMe
 // 直接下发
 // 单纯的进行消息下发,未考虑业务消息
 func (exc *Exchanger) DispatchMessage(msg *InternalMessage) bool {
-	return exc.dispatchMessage(msg)
-}
-
-func (exc *Exchanger) dispatchMessage(msg *InternalMessage) bool {
 	// TODO 使用goroutin池
 	// 用go避免阻塞
 	if exc.router == nil {

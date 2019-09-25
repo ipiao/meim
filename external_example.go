@@ -12,13 +12,10 @@ type (
 )
 
 type ExternalImp struct {
-	//*Router
 	defaultHandler MessageHandler         // 当cmd处理函数未被注册时候,统一处理
 	handlers       map[int]MessageHandler // 处理函数,按cmd
 	onAuthClient   func(*Client) bool     // 处理客户端认证
 	onClientClosed func(*Client)          //
-
-	//offHandler
 }
 
 func NewExternalImp() *ExternalImp {

@@ -9,6 +9,7 @@ import (
 )
 
 // Router 进行用户客户端管理/查找的路由服务
+// example
 type Router struct {
 	mu      sync.RWMutex        //
 	clients map[int64]ClientSet // 这个必须有userId,和server.clients的生存周期有所不同
