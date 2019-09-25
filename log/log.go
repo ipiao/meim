@@ -83,5 +83,5 @@ func Fatalf(format string, args ...interface{}) {
 }
 
 func Close() {
-	logger.Close()
+	//logger.Close()
 }
