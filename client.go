@@ -3,6 +3,7 @@ package meim
 import (
 	"container/list"
 	"fmt"
+	"net"
 	"sync"
 	"time"
 
@@ -182,4 +183,8 @@ func (client *Client) Close() {
 func (client *Client) Run() {
 	client.write()
 	go client.read()
+}
+
+func (client *Client) LocalAddr() net.Addr {
+	return client.conn.LocalAddr()
 }

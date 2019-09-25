@@ -27,6 +27,7 @@ func (h *MarsHeader) Decode(b []byte) error {
 
 func (h *MarsHeader) Encode() ([]byte, error) {
 	b := make([]byte, 20, 20)
+	h.HeadLen = 20
 	binary.BigEndian.PutUint32(b[:4], h.HeadLen)
 	binary.BigEndian.PutUint32(b[4:8], h.Version)
 	binary.BigEndian.PutUint32(b[8:12], h.Command)

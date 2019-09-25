@@ -25,15 +25,15 @@ const (
 
 // rabbit配置
 type RabbitMQConfig struct {
+	Node         int
+	Url          string
 	ExchangeName string
 	ExchangeKind string
-	Url          string
-	RPCTimeout   time.Duration
-	SendTimeout  time.Duration
 	ChanSize     int
 	Channels     uint64
+	RPCTimeout   time.Duration
+	SendTimeout  time.Duration
 	QueuePrefix  string // 队列前缀
-	Node         int
 }
 
 func (cfg *RabbitMQConfig) init() {
@@ -143,8 +143,8 @@ func (rb *RabbitMQ) publish(sessions chan chan session) {
 			body    []byte
 			err     error
 		)
-		log.Debug("[rabbit] publishing...")
 
+		log.Debug("[rabbit] publishing...")
 	Publish:
 		for {
 			select {
@@ -201,7 +201,6 @@ func (rb *RabbitMQ) subscribe(sessions chan chan session) {
 		}
 
 		log.Debug("[rabbit] subscribed...")
-
 		for msg := range deliveries {
 			message := rb.decodeMessage(msg.Body)
 			rb.subMessageChan <- message
@@ -240,6 +239,7 @@ func (rb *RabbitMQ) rpcServer(sessions chan chan session) {
 			continue
 		}
 
+		log.Debug("[rabbit] serving rpc...")
 		for d := range msgs {
 			message := rb.decodeMessage(d.Body)
 			var body []byte
@@ -262,6 +262,8 @@ func (rb *RabbitMQ) rpcServer(sessions chan chan session) {
 // 发送消息
 func (rb *RabbitMQ) rpc(sessions chan chan session) {
 	for session := range sessions {
+		log.Debug("[rabbit] rpc...")
+
 		rpc := <-session
 		var reqs = rb.rpcRequestChan
 	PUBLISH:

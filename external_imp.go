@@ -7,12 +7,16 @@ import (
 // server和gate 的外部函数实现
 // example for ExternalPlugin
 //
+type (
+	MessageHandler func(client *Client, msg *Message)
+)
+
 type ExternalImp struct {
 	//*Router
-	defaultHandler func(*Client, *Message)         // 当cmd处理函数未被注册时候,统一处理
-	handlers       map[int]func(*Client, *Message) // 处理函数,按cmd
-	onAuthClient   func(*Client) bool              // 处理客户端认证
-	onClientClosed func(*Client)                   //
+	defaultHandler MessageHandler         // 当cmd处理函数未被注册时候,统一处理
+	handlers       map[int]MessageHandler // 处理函数,按cmd
+	onAuthClient   func(*Client) bool     // 处理客户端认证
+	onClientClosed func(*Client)          //
 
 	//offHandler
 }
@@ -20,7 +24,7 @@ type ExternalImp struct {
 func NewExternalImp() *ExternalImp {
 	return &ExternalImp{
 		//Router:   NewRouter(),
-		handlers: make(map[int]func(*Client, *Message)),
+		handlers: make(map[int]MessageHandler),
 	}
 }
 
@@ -72,14 +76,14 @@ func (e *ExternalImp) SetOnAuthClient(h func(*Client) bool) {
 	e.onAuthClient = h
 }
 
-func (e *ExternalImp) SetMsgHandler(cmd int, h func(*Client, *Message)) {
+func (e *ExternalImp) SetMsgHandler(cmd int, h MessageHandler) {
 	if _, ok := e.handlers[cmd]; ok {
 		log.Warnf("cmd %d handler already exists, will be replaced", cmd)
 	}
 	e.handlers[cmd] = h
 }
 
-func (e *ExternalImp) SetDefauleHandler(h func(*Client, *Message)) {
+func (e *ExternalImp) SetDefauleHandler(h MessageHandler) {
 	if e.defaultHandler != nil {
 		log.Warnf("defaultHandler already set, will be replaced")
 	}

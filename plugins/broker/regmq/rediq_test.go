@@ -22,7 +22,7 @@ func TestRediQ(t *testing.T) {
 		Channels: ChannelPub | ChannelSub,
 	}
 	dc := dc.NewDataCreator()
-	mq := NewRabbitBroker(mqcfg, dc, nil)
+	mq := NewRabbitMQ(mqcfg, dc, nil)
 
 	rmb = NewRegisterMQ(redi, mq)
 	rmb.Connect()

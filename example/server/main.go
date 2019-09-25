@@ -42,7 +42,7 @@ func main() {
 		QueuePrefix:  "message",
 		Node:         1,
 	}, DC, nil)
-	reg := regmq.NewRedisRegistry2("127.0.0.1", "6379", 1, keyFunc)
+	reg := regmq.NewRedisRegistry2("127.0.0.1", "6379", 1, "USER_NODE")
 	broker := regmq.NewRegisterMQ(reg, rabbit)
 	exc = meim.NewMessageExchanger(router, broker,
 		nil, &InternalMessageHandler{eimp})

@@ -13,7 +13,7 @@ type Logger interface {
 	Errorf(format string, args ...interface{})
 	Fatal(args ...interface{})
 	Fatalf(format string, args ...interface{})
-	Close()
+	//Close()
 }
 
 var (
