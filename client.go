@@ -38,7 +38,7 @@ func NewClient(conn Conn) *Client {
 	client.mch = make(chan *Message, 16)
 	client.lmsch = make(chan int, 1)
 	client.lmessages = list.New()
-	client.extch = make(chan func(*Client), 8)
+	client.extch = make(chan func(*Client), 1)
 	client.enqueueTimeout = time.Second * 10
 	return nil
 }
@@ -99,6 +99,8 @@ func (client *Client) EnqueueNonBlockMessage(msg *Message) bool {
 
 // 发送一般消息
 func (client *Client) FlushMessage() {
+	close(client.mch)
+	close(client.extch)
 	// for msg := range c.mch {
 	// 	WriteMessage(c.conn, msg)
 	// }
