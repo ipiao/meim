@@ -3,6 +3,7 @@ package meim
 import (
 	"errors"
 	"io"
+	"reflect"
 
 	"github.com/ipiao/meim/log"
 	"github.com/ipiao/meim/util"
@@ -49,6 +50,8 @@ type Message struct {
 type DataCreator interface {
 	CreateHeader() ProtocolHeader
 	CreateBody(cmd int) ProtocolBody
+	GetCmd(body interface{}) (int, bool)
+	GetCmd2(t reflect.Type) (int, bool)
 }
 
 // 不限制读

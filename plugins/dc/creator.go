@@ -24,15 +24,15 @@ func NewDataCreator() *DataCreator {
 	}
 }
 
-func (m *DataCreator) SetHeaderType(t reflect.Type) {
+func (m *DataCreator) SetHeaderType2(t reflect.Type) {
 	m.headerType = t
 }
 
-func (m *DataCreator) SetHeaderType2(header meim.ProtocolHeader) {
-	m.SetHeaderType(reflect.TypeOf(header))
+func (m *DataCreator) SetHeaderType(header meim.ProtocolHeader) {
+	m.SetHeaderType2(reflect.TypeOf(header))
 }
 
-func (m *DataCreator) SetBodyCmd(cmd int, t reflect.Type, desc ...string) {
+func (m *DataCreator) SetBodyCmd2(cmd int, t reflect.Type, desc ...string) {
 	if typ, ok := m.cmdType[cmd]; ok {
 		log.Warnf("body cmd %d has been set type %s, will be replaced by %s", cmd, typ, t)
 	}
@@ -46,12 +46,12 @@ func (m *DataCreator) SetBodyCmd(cmd int, t reflect.Type, desc ...string) {
 	}
 }
 
-func (m *DataCreator) SetBodyCmd2(cmd int, body meim.ProtocolBody, desc ...string) {
+func (m *DataCreator) SetBodyCmd(cmd int, body interface{}, desc ...string) {
 	t := reflect.TypeOf(body)
-	m.SetBodyCmd(cmd, t, desc...)
+	m.SetBodyCmd2(cmd, t, desc...)
 }
 
-func (m *DataCreator) GetCmd(t reflect.Type) (int, bool) {
+func (m *DataCreator) GetCmd2(t reflect.Type) (int, bool) {
 	cmd, ok := m.typeCmd[t]
 	if !ok {
 		log.Warnf("body %s doesnt set cmd", t)
@@ -59,9 +59,9 @@ func (m *DataCreator) GetCmd(t reflect.Type) (int, bool) {
 	return cmd, ok
 }
 
-func (m *DataCreator) GetCmd2(body interface{}) (int, bool) {
+func (m *DataCreator) GetCmd(body interface{}) (int, bool) {
 	t := reflect.TypeOf(body)
-	return m.GetCmd(t)
+	return m.GetCmd2(t)
 }
 
 func (m *DataCreator) GetDescription(cmd int) string {
@@ -121,13 +121,13 @@ func newTypeData(t reflect.Type) interface{} {
 	return argv.Interface()
 }
 
-func (m *DataCreator) CreateMessage(body meim.ProtocolBody) *meim.Message {
-	t := reflect.TypeOf(body)
-	cmd, _ := m.GetCmd(t)
+func (m *DataCreator) CreateMessage(body interface{}) *meim.Message {
+	cmd, _ := m.GetCmd(body)
 	hdr := m.CreateHeader()
 	hdr.SetCmd(cmd)
+	d, _ := body.(meim.ProtocolBody)
 	return &meim.Message{
 		Header: hdr,
-		Body:   body,
+		Body:   d,
 	}
 }
