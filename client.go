@@ -170,7 +170,7 @@ func (client *Client) write() {
 				log.Debugf("[write] client %s, msg: %v", client.Log(), msg)
 			} else {
 				if _, ok := err.(net.Error); !ok || err != io.EOF {
-					log.Warnf("[write] client %s, err: %s", client, err)
+					log.Warnf("[write] client %s, msg : %s, err: %s", client.Log(), msg, err)
 				} else {
 					log.Infof("[write] client %s, err: %s", client.Log(), err)
 				}
