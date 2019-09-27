@@ -66,11 +66,11 @@ func (e *ExternalImp) SetMsgHandler(cmd int, h MessageHandler, filters ...Filter
 	if _, ok := e.handlers[cmd]; ok {
 		log.Warnf("cmd %d handler already exists, will be replaced", cmd)
 	}
-	e.handlers[cmd] = filterHandler(h, append(e.defaultFilters, filters...))
+	e.handlers[cmd] = filterHandler(h, append(filters, e.defaultFilters...))
 }
 
-func (e *ExternalImp) SetDefauleHandler(h MessageHandler, filters ...Filter) {
-	e.defaultFilters = append(e.defaultFilters, filters)
+func (e *ExternalImp) SetDefaultHandler(h MessageHandler, filters ...Filter) {
+	e.defaultFilters = append(filters, e.defaultFilters...)
 	if e.defaultHandler != nil {
 		log.Warnf("defaultHandler already set, will be replaced")
 	}
@@ -107,7 +107,7 @@ func (e *ExternalImp) Clone() *ExternalImp {
 func filterHandler(h MessageHandler, filters []Filter) MessageHandler {
 	ret := h
 	for _, filter := range filters {
-		ret = filter[ret]
+		ret = filter(ret)
 	}
 	return ret
 }

@@ -48,7 +48,7 @@ func main() {
 
 	DC = dc.NewProtoDataCreator()
 	eimp = meim.NewExternalImp()
-	eimp.SetDefauleHandler(func(client *meim.Client, msg *meim.Message) { // 写回
+	eimp.SetDefaultHandler(func(client *meim.Client, msg *meim.Message) { // 写回
 		client.EnqueueMessage(msg)
 	})
 	eimp.SetOnAuthClient(func(client *meim.Client) bool {
