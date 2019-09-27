@@ -26,9 +26,6 @@ func (p *ProtoData) Encode() ([]byte, error) {
 }
 
 func (p *ProtoData) Decode(b []byte) error {
-	if b == nil {
-		return nil
-	}
 	err := proto.Unmarshal(b, p.Message)
 	if err != nil {
 		log.Debugf("protodata decode err: %s", err)

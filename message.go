@@ -83,7 +83,6 @@ func ReadLimitMessage(reader io.Reader, dc DataCreator, limitSize int) (*Message
 		log.Warnf("invalid header length: %d", bodyLength)
 		return nil, ErrorReadOutofRange
 	}
-
 	body := dc.CreateBody(header.Cmd())
 	if body != nil {
 		if bodyLength > 0 {

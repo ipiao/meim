@@ -56,6 +56,7 @@ func (m *DataCreator) GetCmd2(t reflect.Type) (int, bool) {
 	if !ok {
 		log.Warnf("body %s doesnt set cmd", t)
 	}
+
 	return cmd, ok
 }
 

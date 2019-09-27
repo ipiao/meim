@@ -18,7 +18,7 @@ type MarsHeader struct {
 }
 
 func (h *MarsHeader) String() string {
-	return fmt.Sprintf("cmd: %d, seq %d", h.Cmd(), h.Seq)
+	return fmt.Sprintf("cmd: %d, seq %d, bodylen %d", h.Cmd(), h.Seq, h.BodyLen)
 }
 
 func (h *MarsHeader) Decode(b []byte) error {
