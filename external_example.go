@@ -13,7 +13,8 @@ type (
 )
 
 type ExternalImp struct {
-	defaultHandler MessageHandler         // 当cmd处理函数未被注册时候,统一处理
+	defaultHandler MessageHandler // 当cmd处理函数未被注册时候,统一处理
+	defaultFilters []Filter
 	handlers       map[int]MessageHandler // 处理函数,按cmd
 	onAuthClient   func(*Client) bool     // 处理客户端认证
 	onClientClosed func(*Client)          //
@@ -21,7 +22,6 @@ type ExternalImp struct {
 
 func NewExternalImp() *ExternalImp {
 	return &ExternalImp{
-		//Router:   NewRouter(),
 		handlers: make(map[int]MessageHandler),
 	}
 }
@@ -62,18 +62,19 @@ func (e *ExternalImp) SetOnAuthClient(h func(*Client) bool) {
 	e.onAuthClient = h
 }
 
-func (e *ExternalImp) SetMsgHandler(cmd int, h MessageHandler) {
+func (e *ExternalImp) SetMsgHandler(cmd int, h MessageHandler, filters ...Filter) {
 	if _, ok := e.handlers[cmd]; ok {
 		log.Warnf("cmd %d handler already exists, will be replaced", cmd)
 	}
-	e.handlers[cmd] = h
+	e.handlers[cmd] = filterHandler(h, append(e.defaultFilters, filters...))
 }
 
-func (e *ExternalImp) SetDefauleHandler(h MessageHandler) {
+func (e *ExternalImp) SetDefauleHandler(h MessageHandler, filters ...Filter) {
+	e.defaultFilters = append(e.defaultFilters, filters)
 	if e.defaultHandler != nil {
 		log.Warnf("defaultHandler already set, will be replaced")
 	}
-	e.defaultHandler = h
+	e.defaultHandler = filterHandler(h, e.defaultFilters)
 }
 
 func (e *ExternalImp) SetOnClientClosed(h func(*Client)) {
@@ -83,14 +84,32 @@ func (e *ExternalImp) SetOnClientClosed(h func(*Client)) {
 	e.onClientClosed = h
 }
 
-func (e *ExternalImp) Copy() *ExternalImp {
-	return &ExternalImp{
+func (e *ExternalImp) Clone() *ExternalImp {
+	imp := &ExternalImp{
 		//Router:         e.Router,
-		handlers:       e.handlers,
 		onAuthClient:   e.onAuthClient,
 		onClientClosed: e.onClientClosed,
 		defaultHandler: e.defaultHandler,
 	}
+	handlers := make(map[int]MessageHandler)
+	for cmd, h := range e.handlers {
+		handlers[cmd] = h
+	}
+	var filters []Filter
+	for _, filter := range e.defaultFilters {
+		filters = append(filters, filter)
+	}
+	e.defaultFilters = filters
+	imp.handlers = handlers
+	return imp
+}
+
+func filterHandler(h MessageHandler, filters []Filter) MessageHandler {
+	ret := h
+	for _, filter := range filters {
+		ret = filter[ret]
+	}
+	return ret
 }
 
 //var eimp *ExternalImp
