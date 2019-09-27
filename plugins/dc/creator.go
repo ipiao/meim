@@ -120,3 +120,14 @@ func newTypeData(t reflect.Type) interface{} {
 
 	return argv.Interface()
 }
+
+func (m *DataCreator) CreateMessage(body meim.ProtocolBody) *meim.Message {
+	t := reflect.TypeOf(body)
+	cmd, _ := m.GetCmd(t)
+	hdr := m.CreateHeader()
+	hdr.SetCmd(cmd)
+	return &meim.Message{
+		Header: hdr,
+		Body:   body,
+	}
+}
