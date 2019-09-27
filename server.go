@@ -83,11 +83,11 @@ func (s *Server) init() {
 // 监听中断信号
 func (s *Server) startShutdownListener() {
 	go func() {
-		log.Infof("server pid: %d", os.Getpid())
+		log.Infof("listen at %s, pid: %d", s.lncfg.Address, os.Getpid())
 		c := make(chan os.Signal, 1)
 		signal.Notify(c, syscall.SIGTERM, syscall.SIGINT)
 		sig := <-c
-		log.Infof("recv signal: %s", sig)
+		log.Infof("listener %s recv signal: %s", s.lncfg.Address, sig)
 		s.closeSig <- true
 	}()
 }
@@ -155,7 +155,7 @@ func (s *Server) serveListener() {
 				continue
 			}
 			// 这里一般是主动断开程序造成的错误
-			log.Warnf("server listener error: %s", err)
+			//log.Warnf("server listener error: %s", err)
 			return
 		}
 		tempDelay = 0
