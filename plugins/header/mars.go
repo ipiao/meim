@@ -61,7 +61,7 @@ func (h *MarsHeader) Clone() meim.ProtocolHeader {
 		HeadLen: h.HeadLen,
 		Version: h.Version,
 		Command: h.Command,
-		Seq:     h.Seq,
+		Seq:     0,
 		BodyLen: h.BodyLen,
 	}
 }
