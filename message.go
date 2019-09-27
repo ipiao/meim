@@ -2,8 +2,8 @@ package meim
 
 import (
 	"errors"
+	"fmt"
 	"io"
-	"reflect"
 
 	"github.com/ipiao/meim/log"
 	"github.com/ipiao/meim/util"
@@ -45,13 +45,16 @@ type Message struct {
 	Body   ProtocolBody
 }
 
+func (m *Message) String() string {
+	return fmt.Sprintf("header: %v, body: %v", m.Header, m.Body)
+}
+
 // 协议数据创建器,可以分别创建头和body
 // 定义DataCreator的作用之一是,在必要的时候,可以对不同的客户端使用不同的数据交换协议
 type DataCreator interface {
 	CreateHeader() ProtocolHeader
 	CreateBody(cmd int) ProtocolBody
 	GetCmd(body interface{}) (int, bool)
-	GetCmd2(t reflect.Type) (int, bool)
 }
 
 // 不限制读
@@ -82,13 +85,15 @@ func ReadLimitMessage(reader io.Reader, dc DataCreator, limitSize int) (*Message
 	}
 
 	body := dc.CreateBody(header.Cmd())
-	if bodyLength > 0 {
-		buff = make([]byte, bodyLength)
-		_, err = io.ReadFull(reader, buff)
-		if err != nil {
-			return nil, err
+	if body != nil {
+		if bodyLength > 0 {
+			buff = make([]byte, bodyLength)
+			_, err = io.ReadFull(reader, buff)
+			if err != nil {
+				return nil, err
+			}
+			err = body.Decode(buff)
 		}
-		err = body.Decode(buff)
 	}
 	return &Message{Header: header, Body: body}, err
 }
@@ -163,7 +168,9 @@ func EncodeLimitMessage(message *Message, limitSize int) ([]byte, error) {
 	}
 
 	buffer.Write(hdr)
-	buffer.Write(body)
+	if body != nil {
+		buffer.Write(body)
+	}
 	return buffer.Bytes(), nil
 }
 

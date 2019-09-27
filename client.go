@@ -3,6 +3,7 @@ package meim
 import (
 	"container/list"
 	"fmt"
+	"io"
 	"net"
 	"sync"
 	"time"
@@ -40,7 +41,7 @@ func NewClient(conn Conn) *Client {
 	client.lmessages = list.New()
 	client.extch = make(chan func(*Client), 1)
 	client.enqueueTimeout = time.Second * 10
-	return nil
+	return client
 }
 
 func (client *Client) Log() string {
@@ -99,8 +100,8 @@ func (client *Client) EnqueueNonBlockMessage(msg *Message) bool {
 
 // 发送一般消息
 func (client *Client) FlushMessage() {
-	close(client.mch)
-	close(client.extch)
+	//close(client.mch)
+	//close(client.extch)
 	// for msg := range c.mch {
 	// 	WriteMessage(c.conn, msg)
 	// }
@@ -162,17 +163,28 @@ func (client *Client) write() {
 			if msg == nil {
 				log.Infof("client:%d socket closed", client.UID)
 				client.FlushMessage()
-				client.conn.Close()
-				break
+				return
 			}
-			WriteMessage(client.conn, msg)
-
+			err := WriteMessage(client.conn, msg)
+			if err == nil {
+				log.Debugf("[write] client %s, msg: %v", client.Log(), msg)
+			} else {
+				if _, ok := err.(net.Error); !ok || err != io.EOF {
+					log.Warnf("[write] client %s, err: %s", client, err)
+				} else {
+					log.Infof("[write] client %s, err: %s", client.Log(), err)
+				}
+				client.FlushMessage()
+				return
+			}
 		case <-client.lmsch:
 			client.SendLMessages()
 			break
 
 		case fn := <-client.extch:
-			fn(client)
+			if fn != nil {
+				fn(client)
+			}
 		}
 	}
 }
@@ -185,8 +197,8 @@ func (client *Client) Close() {
 }
 
 func (client *Client) Run() {
-	client.write()
 	go client.read()
+	client.write()
 }
 
 func (client *Client) LocalAddr() net.Addr {

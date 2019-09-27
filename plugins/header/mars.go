@@ -2,6 +2,7 @@ package header
 
 import (
 	"encoding/binary"
+	"fmt"
 
 	"github.com/ipiao/meim"
 )
@@ -14,6 +15,10 @@ type MarsHeader struct {
 	Command uint32
 	Seq     uint32
 	BodyLen uint32
+}
+
+func (h *MarsHeader) String() string {
+	return fmt.Sprintf("cmd: %d, seq %d", h.Cmd(), h.Seq)
 }
 
 func (h *MarsHeader) Decode(b []byte) error {

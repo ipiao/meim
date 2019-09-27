@@ -17,12 +17,23 @@ func NewProtoData(data proto.Message) *ProtoData {
 	return &ProtoData{data}
 }
 
+func (p *ProtoData) String() string {
+	return p.Message.String()
+}
+
 func (p *ProtoData) Encode() ([]byte, error) {
 	return proto.Marshal(p.Message)
 }
 
 func (p *ProtoData) Decode(b []byte) error {
-	return proto.Unmarshal(b, p.Message)
+	if b == nil {
+		return nil
+	}
+	err := proto.Unmarshal(b, p.Message)
+	if err != nil {
+		log.Debugf("protodata decode err: %s", err)
+	}
+	return err
 }
 
 func (p *ProtoData) Reset() {

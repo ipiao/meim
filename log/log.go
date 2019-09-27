@@ -21,7 +21,7 @@ var (
 )
 
 func init() {
-	l, err := zap.NewProduction(zap.AddCallerSkip(1))
+	l, err := zap.NewDevelopment(zap.AddCallerSkip(1))
 	if err != nil {
 		panic(err)
 	}

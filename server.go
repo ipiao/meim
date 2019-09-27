@@ -183,7 +183,7 @@ func (s *Server) handleConn(conn net.Conn) {
 	s.clientsMu.Unlock()
 
 	s.wgClients.Add(1)
-	log.Debug("new conn: %s", conn.RemoteAddr())
+	log.Debugf("new conn: %s", conn.RemoteAddr())
 
 	go func() {
 		if !s.plugin.HandleAuthClient(client) {
