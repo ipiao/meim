@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"reflect"
 
 	"github.com/ipiao/meim/log"
 	"github.com/ipiao/meim/util"
@@ -55,6 +56,8 @@ type DataCreator interface {
 	CreateHeader() ProtocolHeader
 	CreateBody(cmd int) ProtocolBody
 	GetCmd(body interface{}) (int, bool)
+	GetCmd2(t reflect.Type) (int, bool)
+	GetDescription(cmd int) string
 }
 
 // 不限制读
