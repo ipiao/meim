@@ -105,6 +105,11 @@ func (e *ExternalImp) Clone() *ExternalImp {
 }
 
 func filterHandler(h MessageHandler, filters []Filter) MessageHandler {
+	if h == nil {
+		h = func(client *Client, msg *Message) {
+			// do nothing
+		}
+	}
 	ret := h
 	for _, filter := range filters {
 		ret = filter(ret)
