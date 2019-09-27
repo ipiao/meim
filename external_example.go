@@ -9,6 +9,7 @@ import (
 //
 type (
 	MessageHandler func(client *Client, msg *Message)
+	Filter         func(MessageHandler) MessageHandler
 )
 
 type ExternalImp struct {
