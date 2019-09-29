@@ -18,6 +18,7 @@ type ExternalImp struct {
 	handlers       map[int]MessageHandler // 处理函数,按cmd
 	onAuthClient   func(*Client) bool     // 处理客户端认证
 	onClientClosed func(*Client)          //
+	beforeWrite    MessageHandler
 }
 
 func NewExternalImp() *ExternalImp {
@@ -55,6 +56,12 @@ func (e *ExternalImp) HandleClientClosed(client *Client) {
 	}
 }
 
+func (e *ExternalImp) HandleBeforeWriteMessage(client *Client, message *Message) {
+	if e.beforeWrite != nil {
+		e.beforeWrite(client, message)
+	}
+}
+
 func (e *ExternalImp) SetOnAuthClient(h func(*Client) bool) {
 	if e.onAuthClient != nil {
 		log.Warnf("onAuthClient already set, will be replaced")
@@ -75,6 +82,13 @@ func (e *ExternalImp) SetDefaultHandler(h MessageHandler, filters ...Filter) {
 		log.Warnf("defaultHandler already set, will be replaced")
 	}
 	e.defaultHandler = filterHandler(h, e.defaultFilters)
+}
+
+func (e *ExternalImp) SetBeforeWrite(h MessageHandler) {
+	if e.beforeWrite != nil {
+		log.Warnf("beforeWrite already set, will be replaced")
+	}
+	e.beforeWrite = h
 }
 
 func (e *ExternalImp) SetOnClientClosed(h func(*Client)) {

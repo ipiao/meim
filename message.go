@@ -32,6 +32,8 @@ type ProtocolHeader interface {
 	Length() int
 	Cmd() int   // 协议指令
 	SetCmd(int) // 指定协议指令
+	Seq() int
+	SetSeq(int)
 	BodyLength() int
 	SetBodyLength(n int)
 	Clone() ProtocolHeader
@@ -47,7 +49,7 @@ type Message struct {
 }
 
 func (m *Message) String() string {
-	return fmt.Sprintf("header: %v, body: %v", m.Header, m.Body)
+	return fmt.Sprintf("msg: %s, header: %v, body: %v", m.Header, m.Body)
 }
 
 // 协议数据创建器,可以分别创建头和body

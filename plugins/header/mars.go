@@ -10,22 +10,22 @@ import (
 // wx mars header
 // 消息头部信息, 固定长度20
 type MarsHeader struct {
-	HeadLen uint32
-	Version uint32
-	Command uint32
-	Seq     uint32
-	BodyLen uint32
+	HeadLen  uint32
+	Version  uint32
+	Command  uint32
+	Sequence uint32
+	BodyLen  uint32
 }
 
 func (h *MarsHeader) String() string {
-	return fmt.Sprintf("cmd: %d, seq %d, bodylen %d", h.Cmd(), h.Seq, h.BodyLen)
+	return fmt.Sprintf("cmd: %d, seq %d, bodylen %d", h.Cmd(), h.Sequence, h.BodyLen)
 }
 
 func (h *MarsHeader) Decode(b []byte) error {
 	h.HeadLen = binary.BigEndian.Uint32(b[:4])
 	h.Version = binary.BigEndian.Uint32(b[4:8])
 	h.Command = binary.BigEndian.Uint32(b[8:12])
-	h.Seq = binary.BigEndian.Uint32(b[12:16])
+	h.Sequence = binary.BigEndian.Uint32(b[12:16])
 	h.BodyLen = binary.BigEndian.Uint32(b[16:20])
 	return nil
 }
@@ -36,7 +36,7 @@ func (h *MarsHeader) Encode() ([]byte, error) {
 	binary.BigEndian.PutUint32(b[:4], h.HeadLen)
 	binary.BigEndian.PutUint32(b[4:8], h.Version)
 	binary.BigEndian.PutUint32(b[8:12], h.Command)
-	binary.BigEndian.PutUint32(b[12:16], h.Seq)
+	binary.BigEndian.PutUint32(b[12:16], h.Sequence)
 	binary.BigEndian.PutUint32(b[16:20], h.BodyLen)
 	return b, nil
 }
@@ -53,6 +53,14 @@ func (h *MarsHeader) SetCmd(cmd int) {
 	h.Command = uint32(cmd)
 }
 
+func (h *MarsHeader) SetSeq(seq int) {
+	h.Sequence = uint32(seq)
+}
+
+func (h *MarsHeader) Seq() int {
+	return int(h.Sequence)
+}
+
 func (h *MarsHeader) BodyLength() int {
 	return int(h.BodyLen)
 }
@@ -63,10 +71,10 @@ func (h *MarsHeader) SetBodyLength(n int) {
 
 func (h *MarsHeader) Clone() meim.ProtocolHeader {
 	return &MarsHeader{
-		HeadLen: h.HeadLen,
-		Version: h.Version,
-		Command: h.Command,
-		Seq:     h.Seq,
-		BodyLen: h.BodyLen,
+		HeadLen:  h.HeadLen,
+		Version:  h.Version,
+		Command:  h.Command,
+		Sequence: h.Sequence,
+		BodyLen:  h.BodyLen,
 	}
 }
