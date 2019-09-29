@@ -1,7 +1,11 @@
 package meim
 
 import (
+	"reflect"
+
+	"github.com/gogo/protobuf/proto"
 	"github.com/ipiao/meim/log"
+	"github.com/ipiao/meim/plugins/dc"
 )
 
 // server和gate 的外部函数实现
@@ -132,6 +136,56 @@ func filterHandler(h MessageHandler, filters []Filter) MessageHandler {
 	return ret
 }
 
+// 通过反射注册
+func (e *ExternalImp) RegisterHandler(cmd int, i interface{}, filters ...Filter) {
+	if i == nil {
+		e.SetMsgHandler(cmd, nil, filters...)
+		return
+	}
+	fn := reflect.ValueOf(i)
+	if fn.Kind() != reflect.Func {
+		panic("invalid handler")
+	}
+	if fn.Type().NumIn() != 2 {
+		panic("invalid args number of handler")
+	}
+	// 限定参数类型
+	if fn.Type().In(0) != reflect.TypeOf(&Client{}) ||
+		!fn.Type().In(1).Implements(reflect.TypeOf((*proto.Message)(nil)).Elem()) {
+		panic("invalid args type of handler")
+	}
+	if fn.Type().NumOut() > 0 {
+		for i := 0; i < fn.Type().NumOut(); i++ {
+			if !fn.Type().Out(i).Implements(reflect.TypeOf((*proto.Message)(nil)).Elem()) {
+				panic("invalid return type of handler")
+			}
+		}
+	}
+	f := func(client *Client, msg *Message) {
+		body := msg.Body.(*dc.ProtoData)
+		in := []reflect.Value{
+			reflect.ValueOf(client),
+			reflect.ValueOf(body.Message),
+		}
+		outs := fn.Call(in)
+		for _, out := range outs {
+			var ahdr ProtocolHeader
+			ahdr = msg.Header.Clone()
+			acmd, ok := client.DC.GetCmd2(out.Type())
+			if !ok {
+				log.Warnf("write unregistered msg: %v", msg)
+			}
+			ahdr.SetCmd(acmd)
+			amsg := &Message{
+				Header: ahdr,
+				Body:   dc.NewProtoData(out.Interface().(proto.Message)),
+			}
+			client.EnqueueMessage(amsg)
+		}
+	}
+	e.SetMsgHandler(cmd, f, filters...)
+}
+
 //var eimp *ExternalImp
 //
 //func init() {
@@ -139,3 +193,21 @@ func filterHandler(h MessageHandler, filters []Filter) MessageHandler {
 //	SetExternalPlugin(eimp)
 //	gate.SetExternalPlugin(eimp)
 //}
+
+// filter 防止panic
+// just for example
+func FilterRecover(fn MessageHandler) MessageHandler {
+	return func(client *Client, msg *Message) {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Errorf("[handler][recover][%s] client: %s, request: %+v, info:\n %v",
+					client.DC.GetDescription(msg.Header.Cmd()), client, msg, r)
+			}
+		}()
+		if msg == nil {
+			log.Warnf("[handler] client %s receive nil msg", client)
+			return
+		}
+		fn(client, msg)
+	}
+}

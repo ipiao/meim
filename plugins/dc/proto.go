@@ -86,3 +86,22 @@ func (m *ProtoDataCreator) CreateMessage(body interface{}) *meim.Message {
 		Body:   NewProtoData(d),
 	}
 }
+
+// just for example
+func WriteMessage(client *meim.Client, msg proto.Message) {
+	if client == nil || msg == nil {
+		return
+	}
+	cmd, ok := client.DC.GetCmd(msg)
+	if !ok {
+		log.Warnf("write unregistered msg: %v", msg)
+	}
+
+	hdr := client.DC.CreateHeader()
+	hdr.SetCmd(cmd)
+
+	client.EnqueueMessage(&meim.Message{
+		Header: hdr,
+		Body:   NewProtoData(msg),
+	})
+}
