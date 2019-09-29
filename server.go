@@ -125,12 +125,14 @@ func (s *Server) Close() {
 	// 处理ConnClose
 	s.clientsMu.Lock()
 	for client := range s.clients {
-		//client.Close()
-		client.conn.Close() //要直接断开连接
+		client.Close()
+		//if client.closed.CAS(false, true) {
+		//	client.conn.Close() //要直接断开连接
+		//}
 	}
 	s.clientsMu.Unlock()
 	s.wgClients.Wait()
-	log.Infof("wait all client onclose done")
+	log.Infof("server %s wait all client onclose done", s.lncfg.Address)
 }
 
 func (s *Server) serveListener() {
