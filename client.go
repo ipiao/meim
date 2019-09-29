@@ -49,7 +49,7 @@ func (client *Client) Log() string {
 }
 
 func (client *Client) String() string {
-	return fmt.Sprintf(" uid: %d, addr: %s, data: %+v", client.UID, client.conn.RemoteAddr(), client.UserData)
+	return fmt.Sprintf(" uid: %d, addr: %s, data: %v", client.UID, client.conn.RemoteAddr(), client.UserData)
 }
 
 // 发送一般消息
@@ -100,6 +100,9 @@ func (client *Client) EnqueueNonBlockMessage(msg *Message) bool {
 
 // 发送一般消息
 func (client *Client) FlushMessage() {
+	if !client.closed.Load() {
+		return
+	}
 	//close(client.mch)
 	//close(client.extch)
 	// for msg := range c.mch {
@@ -167,11 +170,11 @@ func (client *Client) write() {
 			}
 			client.plugin.HandleBeforeWriteMessage(client, msg)
 			err := WriteMessage(client.conn, msg)
-			if err == nil {
-				log.Debugf("[write] client %s, msg: %v", client.Log(), msg)
-			} else {
+			if err != nil {
 				if _, ok := err.(net.Error); !ok || err != io.EOF {
 					log.Warnf("[write] client %s, msg : %s, err: %s", client.Log(), msg, err)
+				} else {
+					log.Infof("[write] client %s, msg : %s, err: %s", client.Log(), msg, err)
 				}
 				client.FlushMessage()
 				return

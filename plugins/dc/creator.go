@@ -85,16 +85,25 @@ func (m *DataCreator) GetMsg(cmd int) interface{} {
 func (m *DataCreator) Clone() *DataCreator {
 	cts := make(map[int]reflect.Type)
 	tcs := make(map[reflect.Type]int)
+	cmdDescs := make(map[int]string)
 
 	for cmd, bt := range m.cmdType {
 		cts[cmd] = bt
+	}
+
+	for bt, cmd := range m.typeCmd {
 		tcs[bt] = cmd
 	}
 
+	for cmd, desc := range m.cmdDescription {
+		cmdDescs[cmd] = desc
+	}
+
 	return &DataCreator{
-		headerType: m.headerType,
-		cmdType:    cts,
-		typeCmd:    tcs,
+		headerType:     m.headerType,
+		cmdType:        cts,
+		typeCmd:        tcs,
+		cmdDescription: cmdDescs,
 	}
 }
 

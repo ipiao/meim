@@ -409,7 +409,7 @@ func (rb *RabbitMQ) SendMessage(node int, msg *meim.InternalMessage) error {
 // rpc 服务调用
 // 同步发送等待返回
 func (rb *RabbitMQ) SyncMessage(node int, msg *meim.InternalMessage) (*meim.InternalMessage, error) {
-	log.Debugf("[rabbit] SyncMessage: node->%s: %+v", node, msg)
+	log.Debugf("[rabbit] SyncMessage: node->%s: %v", node, msg)
 	if msg == nil {
 		return nil, errors.New("nil message")
 	}

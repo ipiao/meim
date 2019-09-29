@@ -49,7 +49,7 @@ type Message struct {
 }
 
 func (m *Message) String() string {
-	return fmt.Sprintf("msg: %s, header: %v, body: %v", m.Header, m.Body)
+	return fmt.Sprintf("header: %v, body: %v", m.Header, m.Body)
 }
 
 // 协议数据创建器,可以分别创建头和body

@@ -104,6 +104,7 @@ func (e *ExternalImp) Clone() *ExternalImp {
 		onAuthClient:   e.onAuthClient,
 		onClientClosed: e.onClientClosed,
 		defaultHandler: e.defaultHandler,
+		beforeWrite:    e.beforeWrite,
 	}
 	handlers := make(map[int]MessageHandler)
 	for cmd, h := range e.handlers {
@@ -113,7 +114,7 @@ func (e *ExternalImp) Clone() *ExternalImp {
 	for _, filter := range e.defaultFilters {
 		filters = append(filters, filter)
 	}
-	e.defaultFilters = filters
+	imp.defaultFilters = filters
 	imp.handlers = handlers
 	return imp
 }
