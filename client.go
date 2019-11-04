@@ -149,6 +149,13 @@ func (client *Client) EnqueueEvent(fn func(*Client)) bool {
 	}
 }
 
+// 如果不能入队列，就直接处理
+func (client *Client) EnsureEvent(fn func(*Client)) {
+	if !client.EnqueueEvent(fn) {
+		fn(client)
+	}
+}
+
 func (client *Client) read() {
 	for {
 		msg, err := ReadLimitMessage(client.conn, client.DC, 128*1024)
