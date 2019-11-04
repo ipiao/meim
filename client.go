@@ -100,14 +100,17 @@ func (client *Client) EnqueueNonBlockMessage(msg *Message) bool {
 
 // 发送一般消息
 func (client *Client) FlushMessage() {
-	if !client.closed.Load() {
+	if !client.closed.Load() { // 防止发送端继续发送数据
 		return
 	}
-	//close(client.mch)
-	//close(client.extch)
-	// for msg := range c.mch {
-	// 	WriteMessage(c.conn, msg)
-	// }
+	close(client.mch)
+	close(client.extch)
+	for msg := range client.mch {
+		WriteMessage(client.conn, msg)
+	}
+	for fn := range client.extch {
+		fn(client)
+	}
 	client.SendLMessages()
 }
 
