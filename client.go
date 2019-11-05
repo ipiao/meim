@@ -136,7 +136,7 @@ func (client *Client) SendLMessages() {
 
 func (client *Client) EnqueueEvent(fn func(*Client)) bool {
 	if client.closed.Load() { // 已关闭
-		log.Infof("can't add event to closed connection %s", client.Log())
+		log.Infof("can't add event to closed client %s", client.Log())
 		return false
 	}
 
