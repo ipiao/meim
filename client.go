@@ -55,7 +55,7 @@ func (client *Client) String() string {
 // 发送一般消息
 func (client *Client) EnqueueMessage(msg *Message) bool {
 	if client.closed.Load() { // 已关闭
-		log.Infof("can't send message to closed connection %s", client.Log())
+		log.Infof("can't send message to closed client %s", client.Log())
 		return false
 	}
 
@@ -71,7 +71,7 @@ func (client *Client) EnqueueMessage(msg *Message) bool {
 // 发送非阻塞消息
 func (client *Client) EnqueueNonBlockMessage(msg *Message) bool {
 	if client.closed.Load() { // 已关闭
-		log.Infof("can't send message to closed connection %s", client.Log())
+		log.Infof("can't send message to closed client %s", client.Log())
 		return false
 	}
 
@@ -87,7 +87,7 @@ func (client *Client) EnqueueNonBlockMessage(msg *Message) bool {
 	client.mu.Unlock()
 
 	if dropped {
-		log.Info("connection %s message queue full, drop a message", client.Log())
+		log.Info("client %s message queue full, drop a message", client.Log())
 	}
 
 	//nonblock
@@ -152,6 +152,7 @@ func (client *Client) EnqueueEvent(fn func(*Client)) bool {
 // 如果不能入队列，就直接处理
 func (client *Client) EnsureEvent(fn func(*Client)) {
 	if !client.EnqueueEvent(fn) {
+		log.Debugf("client %s EnqueueEvent failed, exec it direct", client.Log())
 		fn(client)
 	}
 }
@@ -160,7 +161,7 @@ func (client *Client) read() {
 	for {
 		msg, err := ReadLimitMessage(client.conn, client.DC, 128*1024)
 		if err != nil {
-			log.Info("client read error:", err)
+			log.Info("client %s read error:", client.Log(), err)
 			client.Close()
 			break
 		}
