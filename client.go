@@ -161,7 +161,7 @@ func (client *Client) read() {
 	for {
 		msg, err := ReadLimitMessage(client.conn, client.DC, 128*1024)
 		if err != nil {
-			log.Infof("client %s read error:", client.Log(), err)
+			log.Infof("client %s read error: %s", client.Log(), err)
 			client.Close()
 			break
 		}
