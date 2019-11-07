@@ -175,7 +175,9 @@ func (client *Client) write() {
 		select {
 		case msg := <-client.mch:
 			if msg == nil {
-				log.Infof("client:%d socket closed", client.UID)
+				if client.UID != 0 {
+					log.Infof("client:%d socket closed", client.Log())
+				}
 				client.FlushMessage()
 				return
 			}
