@@ -184,10 +184,10 @@ func (client *Client) write() {
 			client.plugin.HandleBeforeWriteMessage(client, msg)
 			err := WriteMessage(client.conn, msg)
 			if err != nil {
-				if _, ok := err.(net.Error); !ok || err != io.EOF {
-					log.Warnf("[write] client %s, msg : %s, err: %s", client.Log(), msg, err)
+				if _, ok := err.(net.Error); ok || err == io.EOF {
+					log.Infof("[write-nil] client %s, msg : %s, err: %s", client.Log(), msg, err)
 				} else {
-					log.Infof("[write] client %s, msg : %s, err: %s", client.Log(), msg, err)
+					log.Warnf("[write-err] client %s, msg : %s, err: %s", client.Log(), msg, err)
 				}
 				client.FlushMessage()
 				return
