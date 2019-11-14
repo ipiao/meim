@@ -4,8 +4,8 @@ import (
 	"io"
 	"net"
 
+	"github.com/ipiao/meim.v2/log"
 	"github.com/ipiao/meim.v2/protocol"
-	"github.com/ipiao/meim/log"
 )
 
 type PluginI interface {

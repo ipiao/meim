@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ipiao/meim.v2/log"
 	"github.com/ipiao/meim.v2/protocol"
-	"github.com/ipiao/meim/log"
 	"go.uber.org/atomic"
 )
 

@@ -4,7 +4,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/ipiao/meim/log"
+	"github.com/ipiao/meim.v2/log"
 )
 
 // 为什么不直接用net.Conn?

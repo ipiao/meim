@@ -7,7 +7,7 @@ import (
 
 	meim "github.com/ipiao/meim.v2"
 	"github.com/ipiao/meim.v2/client"
-	"github.com/ipiao/meim/log"
+	"github.com/ipiao/meim.v2/log"
 )
 
 func main() {

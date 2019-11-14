@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	"time"
 
-	"github.com/ipiao/meim/log"
+	"github.com/ipiao/meim.v2/log"
 )
 
 var (
