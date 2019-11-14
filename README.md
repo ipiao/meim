@@ -1,2 +1,6 @@
-#### 放弃任何直接的业务耦合
-- 一切业务由plugin执行
+#### meim.v2
+- 单纯的socket读写
+    - TODO delete event
+    
+- 用plugin处理业务
+- 支持header定制，读数据不解析body
