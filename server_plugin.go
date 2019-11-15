@@ -12,15 +12,17 @@ type PluginI interface {
 	CreateHeader() protocol.ProtoHeader
 	HandleMessage(client *Client, message *protocol.Message)
 	HandleOnWriteError(client *Client, message *protocol.Message, err error) bool // 在写消息出错时候处理
+	HandleBeforeWriteMessage(client *Client, message *protocol.Message)
 }
 
 var _ PluginI = DefaultPlugin()
 
 // 必须实现
 type Plugin struct {
-	HeaderCreator  protocol.ProtoHeaderCreator
-	MessageHandler func(client *Client, message *protocol.Message)
-	OnWriteError   func(client *Client, message *protocol.Message, err error) (shutdown bool)
+	HeaderCreator      protocol.ProtoHeaderCreator
+	MessageHandler     func(client *Client, message *protocol.Message)
+	OnWriteError       func(client *Client, message *protocol.Message, err error) (shutdown bool)
+	BeforeWriteMessage func(client *Client, message *protocol.Message)
 }
 
 func DefaultPlugin() *Plugin {
@@ -36,6 +38,9 @@ func DefaultPlugin() *Plugin {
 				log.Warnf("[write-err] client %s, msg : %s, err: %s", client.Log(), message, err)
 			}
 			return true
+		},
+		BeforeWriteMessage: func(client *Client, message *protocol.Message) {
+			log.Infof("client %s, write message %s", client.Log(), message.Log())
 		},
 	}
 }
@@ -56,4 +61,9 @@ func (p *Plugin) HandleOnWriteError(client *Client, message *protocol.Message, e
 		return p.OnWriteError(client, message, err)
 	}
 	return false
+}
+func (p *Plugin) HandleBeforeWriteMessage(client *Client, message *protocol.Message) {
+	if p.BeforeWriteMessage != nil {
+		p.BeforeWriteMessage(client, message)
+	}
 }

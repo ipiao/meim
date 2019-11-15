@@ -116,7 +116,7 @@ func (client *Client) SendLMessages() {
 	e := messages.Front()
 	for e != nil {
 		msg := e.Value.(*protocol.Message)
-		protocol.WriteLimitMessage(client.Conn, msg, client.cfg.MaxWriteBodySize)
+		client.WriteMessage(msg)
 		e = e.Next()
 	}
 }
@@ -182,7 +182,7 @@ func (client *Client) write() {
 				client.flush()
 				return
 			}
-			err := protocol.WriteLimitMessage(client.Conn, msg, client.cfg.MaxWriteBodySize)
+			err := client.WriteMessage(msg)
 			if err != nil {
 				if _, ok := err.(net.Error); ok || err == io.EOF { // maybe write on closed connection
 					log.Infof("[write-nil] client %s, msg : %s, err: %s", client.Log(), msg, err)
@@ -216,7 +216,7 @@ func (client *Client) flush() {
 	}
 	//close(client.mch)
 	//for msg := range client.mch {
-	//	protocol.WriteLimitMessage(client.Conn, msg, client.cfg.MaxWriteBodySize)
+	//	protocol.WriteMessage(client.Conn, msg, client.cfg.MaxWriteBodySize)
 	//}
 	//close(client.eventCh)
 	//for fn := range client.eventCh {
@@ -232,4 +232,10 @@ func (client *Client) Close() {
 		log.Infof("try close client %s", client.Log())
 		client.mch <- nil
 	}
+}
+
+// write message direct
+func (client *Client) WriteMessage(msg *protocol.Message) error {
+	client.HandleBeforeWriteMessage(client, msg)
+	return protocol.WriteLimitMessage(client.Conn, msg, client.cfg.MaxWriteBodySize)
 }
