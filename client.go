@@ -18,12 +18,14 @@ type Client struct {
 	PluginI
 	cfg ClientConfig
 
+	// 使用chan提供简单的缓冲、同步功能（在业务中如果做了相应的功能就可以直接使用WriteMessage）
 	mch       chan *protocol.Message // 一般消息下发通道, message channel
 	lMessages *list.List             // 长消息存储队列(非阻塞消息下发,能忍受延时)
 	lSignal   chan int               // 长消息下发(信号),long message signal channel
 	eventCh   chan func(*Client)     // 外部事件队列, external event channel
-	mu        sync.Mutex             // 锁
-	closed    atomic.Bool            // 是否关闭
+
+	mu     sync.Mutex  // 锁
+	closed atomic.Bool // 是否关闭
 
 	UID      int64       // 用户id
 	Version  int16       // 版本
