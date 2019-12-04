@@ -2,28 +2,28 @@ package time
 
 import (
 	"sync"
-	itime "time"
+	xtime "time"
 
 	"github.com/ipiao/meim.v2/log"
 )
 
 const (
 	timerFormat      = "2006-01-02 15:04:05"
-	infiniteDuration = itime.Duration(1<<63 - 1)
+	infiniteDuration = xtime.Duration(1<<63 - 1)
 )
 
 // TimerData timer data.
 type TimerData struct {
 	Key    string
-	expire itime.Time
+	expire xtime.Time
 	fn     func()
 	index  int
 	next   *TimerData
 }
 
 // Delay delay duration.
-func (td *TimerData) Delay() itime.Duration {
-	return itime.Until(td.expire)
+func (td *TimerData) Delay() xtime.Duration {
+	return xtime.Until(td.expire)
 }
 
 // ExpireString expire string.
@@ -36,7 +36,7 @@ type Timer struct {
 	lock   sync.Mutex
 	free   *TimerData
 	timers []*TimerData
-	signal *itime.Timer
+	signal *xtime.Timer
 	num    int
 }
 
@@ -58,7 +58,7 @@ func (t *Timer) Init(num int) {
 }
 
 func (t *Timer) init(num int) {
-	t.signal = itime.NewTimer(infiniteDuration)
+	t.signal = xtime.NewTimer(infiniteDuration)
 	t.timers = make([]*TimerData, 0, num)
 	t.num = num
 	t.grow()
@@ -87,6 +87,7 @@ func (t *Timer) get() (td *TimerData) {
 		td = t.free
 	}
 	t.free = td.next
+	td.next = nil
 	return
 }
 
@@ -99,10 +100,10 @@ func (t *Timer) put(td *TimerData) {
 
 // Add add the element x onto the heap. The complexity is
 // O(log(n)) where n = h.Len().
-func (t *Timer) Add(expire itime.Duration, fn func()) (td *TimerData) {
+func (t *Timer) Add(expire xtime.Duration, fn func()) (td *TimerData) {
 	t.lock.Lock()
 	td = t.get()
-	td.expire = itime.Now().Add(expire)
+	td.expire = xtime.Now().Add(expire)
 	td.fn = fn
 	t.add(td)
 	t.lock.Unlock()
@@ -121,7 +122,7 @@ func (t *Timer) Del(td *TimerData) {
 // Push pushes the element x onto the heap. The complexity is
 // O(log(n)) where n = h.Len().
 func (t *Timer) add(td *TimerData) {
-	var d itime.Duration
+	var d xtime.Duration
 	td.index = len(t.timers)
 	// add to the minheap last node
 	t.timers = append(t.timers, td)
@@ -130,8 +131,7 @@ func (t *Timer) add(td *TimerData) {
 		// if first node, signal start goroutine
 		d = td.Delay()
 		t.signal.Reset(d)
-		log.Debugf("timer: add reset delay %d ms", int64(d)/int64(itime.Millisecond))
-
+		log.Debugf("timer: add reset delay %d ms", int64(d)/int64(xtime.Millisecond))
 	}
 	log.Debugf("timer: push item key: %s, expire: %s, index: %d", td.Key, td.ExpireString(), td.index)
 }
@@ -160,10 +160,10 @@ func (t *Timer) del(td *TimerData) {
 }
 
 // Set update timer data.
-func (t *Timer) Set(td *TimerData, expire itime.Duration) {
+func (t *Timer) Set(td *TimerData, expire xtime.Duration) {
 	t.lock.Lock()
 	t.del(td)
-	td.expire = itime.Now().Add(expire)
+	td.expire = xtime.Now().Add(expire)
 	t.add(td)
 	t.lock.Unlock()
 }
@@ -183,7 +183,7 @@ func (t *Timer) expire() {
 	var (
 		fn func()
 		td *TimerData
-		d  itime.Duration
+		d  xtime.Duration
 	)
 	t.lock.Lock()
 	for {
@@ -202,16 +202,15 @@ func (t *Timer) expire() {
 		t.del(td)
 		t.lock.Unlock()
 		if fn == nil {
-			log.Warning("expire timer no fn")
+			log.Warn("expire timer no fn")
 		} else {
 			log.Debugf("timer key: %s, expire: %s, index: %d expired, call fn", td.Key, td.ExpireString(), td.index)
-
 			fn()
 		}
 		t.lock.Lock()
 	}
 	t.signal.Reset(d)
-	log.Debugf("timer: expier reset delay %d ms", int64(d)/int64(itime.Millisecond))
+	log.Debugf("timer: expire reset delay %d ms", int64(d)/int64(xtime.Millisecond))
 
 	t.lock.Unlock()
 }

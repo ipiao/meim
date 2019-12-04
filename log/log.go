@@ -41,7 +41,7 @@ func init() { logger = new(glogger) }
 type glogger struct{}
 
 func (l *glogger) Debug(args ...interface{})                 { fmt.Println(args...) }
-func (l *glogger) Debugf(format string, args ...interface{}) { fmt.Printf(format, args...) }
+func (l *glogger) Debugf(format string, args ...interface{}) { fmt.Printf(format+"\n", args...) }
 func (l *glogger) Info(args ...interface{})                  { glog.Info(args...) }
 func (l *glogger) Infof(format string, args ...interface{})  { glog.Infof(format, args...) }
 func (l *glogger) Warn(args ...interface{})                  { glog.Warning(args...) }
