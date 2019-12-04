@@ -1,4 +1,4 @@
-package meim_v2
+package meim
 
 import (
 	"net"

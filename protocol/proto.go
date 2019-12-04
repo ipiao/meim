@@ -17,6 +17,11 @@ var (
 	DefaultWriteLimit = 1 << 22
 )
 
+type RoomMessage struct {
+	RoomID string
+	Proto  *Message
+}
+
 type Message struct {
 	Header ProtoHeader
 	Body   []byte

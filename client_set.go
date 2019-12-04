@@ -1,4 +1,4 @@
-package meim_v2
+package meim
 
 // ClientSet client哈希set
 type ClientSet map[*Client]struct{}
