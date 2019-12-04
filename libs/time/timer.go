@@ -4,7 +4,7 @@ import (
 	"sync"
 	itime "time"
 
-	log "github.com/golang/glog"
+	"github.com/ipiao/meim.v2/log"
 )
 
 const (
@@ -130,13 +130,10 @@ func (t *Timer) add(td *TimerData) {
 		// if first node, signal start goroutine
 		d = td.Delay()
 		t.signal.Reset(d)
-		if Debug {
-			log.Infof("timer: add reset delay %d ms", int64(d)/int64(itime.Millisecond))
-		}
+		log.Debugf("timer: add reset delay %d ms", int64(d)/int64(itime.Millisecond))
+
 	}
-	if Debug {
-		log.Infof("timer: push item key: %s, expire: %s, index: %d", td.Key, td.ExpireString(), td.index)
-	}
+	log.Debugf("timer: push item key: %s, expire: %s, index: %d", td.Key, td.ExpireString(), td.index)
 }
 
 func (t *Timer) del(td *TimerData) {
@@ -146,9 +143,8 @@ func (t *Timer) del(td *TimerData) {
 	)
 	if i < 0 || i > last || t.timers[i] != td {
 		// already remove, usually by expire
-		if Debug {
-			log.Infof("timer del i: %d, last: %d, %p", i, last, td)
-		}
+		log.Debugf("timer del i: %d, last: %d, %p", i, last, td)
+
 		return
 	}
 	if i != last {
@@ -159,9 +155,8 @@ func (t *Timer) del(td *TimerData) {
 	// remove item is the last node
 	t.timers[last].index = -1 // for safety
 	t.timers = t.timers[:last]
-	if Debug {
-		log.Infof("timer: remove item key: %s, expire: %s, index: %d", td.Key, td.ExpireString(), td.index)
-	}
+	log.Debugf("timer: remove item key: %s, expire: %s, index: %d", td.Key, td.ExpireString(), td.index)
+
 }
 
 // Set update timer data.
@@ -194,9 +189,8 @@ func (t *Timer) expire() {
 	for {
 		if len(t.timers) == 0 {
 			d = infiniteDuration
-			if Debug {
-				log.Info("timer: no other instance")
-			}
+			log.Debugf("timer: no other instance")
+
 			break
 		}
 		td = t.timers[0]
@@ -210,17 +204,15 @@ func (t *Timer) expire() {
 		if fn == nil {
 			log.Warning("expire timer no fn")
 		} else {
-			if Debug {
-				log.Infof("timer key: %s, expire: %s, index: %d expired, call fn", td.Key, td.ExpireString(), td.index)
-			}
+			log.Debugf("timer key: %s, expire: %s, index: %d expired, call fn", td.Key, td.ExpireString(), td.index)
+
 			fn()
 		}
 		t.lock.Lock()
 	}
 	t.signal.Reset(d)
-	if Debug {
-		log.Infof("timer: expier reset delay %d ms", int64(d)/int64(itime.Millisecond))
-	}
+	log.Debugf("timer: expier reset delay %d ms", int64(d)/int64(itime.Millisecond))
+
 	t.lock.Unlock()
 }
 
