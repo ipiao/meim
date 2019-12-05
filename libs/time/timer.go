@@ -215,10 +215,20 @@ func (t *Timer) expire() {
 	t.lock.Unlock()
 }
 
+func (t *Timer) index(expire xtime.Time) (ind int, renew bool) {
+	clen := len(t.timers)
+	if clen <= 1 || !expire.Before(t.timers[clen-1].expire) {
+		renew = true
+		ind = clen
+		return
+	}
+	return
+}
+
 func (t *Timer) up(j int) {
 	for {
-		i := (j - 1) / 2 // parent
-		if i <= j || !t.less(j, i) {
+		i := j - 1 // (j - 1) / 2 // parent
+		if !t.less(j, i) {
 			break
 		}
 		t.swap(i, j)
