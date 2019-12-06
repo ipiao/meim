@@ -17,6 +17,7 @@ var (
 	DefaultWriteLimit = 1 << 22
 )
 
+// 房间消息
 type RoomMessage struct {
 	RoomID string
 	Proto  *Message
@@ -31,14 +32,14 @@ func (m *Message) Log() string {
 	if m.Header != nil {
 		return logHeader(m.Header)
 	}
-	return "nil message"
+	return "<nil>"
 }
 
 // header 创建器
 type ProtoHeaderCreator func() ProtoHeader
 
-// 数据头
-// 为了在进行框架切换的时候版本兼容，使用interface Header
+// 数据头 interface 提供灵活性
+// 为了在进行框架切换的时候版本兼容
 type ProtoHeader interface {
 	Len() int                   // 头自身长度，推荐固定长
 	Ver() int16                 // Version,版本号

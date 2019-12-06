@@ -145,7 +145,7 @@ func (b *Bucket) Del(dch *Channel) {
 		if ch == dch {
 			delete(b.chs, ch.Key)
 		}
-		// ip counter
+		// 删减ip数量
 		if b.ipChannels[ch.IP] > 1 {
 			b.ipChannels[ch.IP]--
 		} else {
@@ -154,7 +154,7 @@ func (b *Bucket) Del(dch *Channel) {
 	}
 	b.cLock.Unlock()
 	if room != nil && room.Del(ch) {
-		// if empty room, must delete from bucket
+		// 如果房间已空，从bucket中删除房间
 		b.DelRoom(room)
 	}
 }

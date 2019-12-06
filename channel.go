@@ -4,27 +4,31 @@ import (
 	"bufio"
 	"sync"
 
+	"github.com/ipiao/meim.v2/log"
+
 	"github.com/ipiao/meim.v2/protocol"
 )
 
 var (
-	ProtoReady  = &protocol.Message{}
-	ProtoFinish = &protocol.Message{}
+	SignalReady  = &protocol.Message{}
+	SignalFinish = &protocol.Message{}
 )
 
 // Channel 消息推送器推送的时候使用，将消息传递给连接的写线程
 type Channel struct {
-	Room     *Room //如果room不是nil，代表是房间的channel
+	Room *Room //如果room不是nil，代表是房间的channel
+
+	Next *Channel // 暂时只有Room使用
+	Prev *Channel // 暂时只有Room使用
+
 	CliProto Ring
 	signal   chan *protocol.Message
 	Writer   bufio.Writer
 	Reader   bufio.Reader
-	Next     *Channel
-	Prev     *Channel
 
-	Mid      int64
 	Key      string
 	IP       string
+	Mid      int64
 	watchOps map[int32]struct{}
 	mutex    sync.RWMutex
 }
@@ -74,21 +78,22 @@ func (c *Channel) Push(p *protocol.Message) (err error) {
 	select {
 	case c.signal <- p:
 	default:
+		log.Warnf("signal channel is full")
 	}
 	return
 }
 
 // Ready 检查通道是否就绪或关闭
-func (c *Channel) Ready() *protocol.Message {
+func (c *Channel) Signal() *protocol.Message {
 	return <-c.signal
 }
 
 // Signal 发送就绪信号到通道
-func (c *Channel) Signal() {
-	//c.signal <- rpc.ProtoReady
+func (c *Channel) Ready() {
+	c.signal <- SignalReady
 }
 
 // Close 发送关闭信号到通道
 func (c *Channel) Close() {
-	//c.signal <- rpc.ProtoFinish
+	c.signal <- SignalFinish
 }

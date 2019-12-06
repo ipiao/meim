@@ -3,8 +3,6 @@ package time
 import (
 	"sync"
 	xtime "time"
-
-	"github.com/ipiao/meim.v2/log"
 )
 
 const (
@@ -12,59 +10,53 @@ const (
 	infiniteDuration = xtime.Duration(1<<63 - 1)
 )
 
-// TimerData timer data.
+// TimerData 定时任务数据，双向链表
 type TimerData struct {
 	Key    string
 	expire xtime.Time
 	fn     func()
-	index  int
 	next   *TimerData
+	pre    *TimerData
 }
 
-// Delay delay duration.
+// Delay 延迟时长
 func (td *TimerData) Delay() xtime.Duration {
 	return xtime.Until(td.expire)
 }
 
-// ExpireString expire string.
+// ExpireString 到期时间的字符串表示
 func (td *TimerData) ExpireString() string {
 	return td.expire.Format(timerFormat)
 }
 
-// Timer timer.
+// Timer 定时器.
 type Timer struct {
-	lock   sync.Mutex
-	free   *TimerData
-	timers []*TimerData
-	signal *xtime.Timer
-	num    int
+	lock       sync.Mutex
+	free       *TimerData // 里面的pre无效
+	timers     *TimerData
+	timersTail *TimerData // 最后一个
+	signal     *xtime.Timer
+	num        int
+	timerNum   int // 等待执行的链长
+	freeNum    int // 空闲链长
 }
 
-// NewTimer new a timer.
-// A heap must be initialized before any of the heap operations
-// can be used. Init is idempotent with respect to the heap invariants
-// and may be called whenever the heap invariants may have been invalidated.
-// Its complexity is O(n) where n = h.Len().
-//
+// 创建一个定时器，带任务书局缓存的，可以提好内存利用率
+// 链表操作，添加任务基本是O(n)时间复杂度
 func NewTimer(num int) (t *Timer) {
 	t = new(Timer)
 	t.init(num)
 	return t
 }
 
-// Init init the timer.
-func (t *Timer) Init(num int) {
-	t.init(num)
-}
-
 func (t *Timer) init(num int) {
 	t.signal = xtime.NewTimer(infiniteDuration)
-	t.timers = make([]*TimerData, 0, num)
 	t.num = num
 	t.grow()
 	go t.start()
 }
 
+// 增长定时任务的任务数据缓冲
 func (t *Timer) grow() {
 	var (
 		i   int
@@ -78,9 +70,11 @@ func (t *Timer) grow() {
 		td = td.next
 	}
 	td.next = nil
+	t.freeNum += t.num
+	//log.Debugf("timer grow, freeNum is %d now", t.freeNum)
 }
 
-// get get a free timer data.
+// 获取一个空闲的数据内存
 func (t *Timer) get() (td *TimerData) {
 	if td = t.free; td == nil {
 		t.grow()
@@ -88,19 +82,33 @@ func (t *Timer) get() (td *TimerData) {
 	}
 	t.free = td.next
 	td.next = nil
+	t.freeNum--
 	return
 }
 
-// put put back a timer data.
+// put 将数据内存放回
+// TODO 不减，在内存数据足够多的情况下应释放掉
 func (t *Timer) put(td *TimerData) {
-	td.fn = nil
+	if t.freeNum > 2*t.num && t.freeNum >= t.timerNum { // 内存池足够的情况下，不放回了，等待gc
+		//log.Debugf("freeNum is %d, timerNum is %d, td released", t.freeNum, t.timerNum)
+		td.pre = nil
+		td.next = nil
+		return
+	}
+	if t.free != nil {
+		t.free.pre = td
+	}
+	td.pre = nil
 	td.next = t.free
 	t.free = td
+	t.freeNum++
 }
 
-// Add add the element x onto the heap. The complexity is
-// O(log(n)) where n = h.Len().
+// 添加一个任务，如果时间没有固定性，将是O(n)复杂度
 func (t *Timer) Add(expire xtime.Duration, fn func()) (td *TimerData) {
+	if fn == nil {
+		panic("fn can not be nil")
+	}
 	t.lock.Lock()
 	td = t.get()
 	td.expire = xtime.Now().Add(expire)
@@ -110,8 +118,7 @@ func (t *Timer) Add(expire xtime.Duration, fn func()) (td *TimerData) {
 	return
 }
 
-// Del removes the element at index i from the heap.
-// The complexity is O(log(n)) where n = h.Len().
+// 删除一个任务， O(1) 复杂度
 func (t *Timer) Del(td *TimerData) {
 	t.lock.Lock()
 	t.del(td)
@@ -119,47 +126,63 @@ func (t *Timer) Del(td *TimerData) {
 	t.lock.Unlock()
 }
 
-// Push pushes the element x onto the heap. The complexity is
-// O(log(n)) where n = h.Len().
+// add 将任务添加到链表相应位置
 func (t *Timer) add(td *TimerData) {
-	var d xtime.Duration
-	td.index = len(t.timers)
-	// add to the minheap last node
-	t.timers = append(t.timers, td)
-	t.up(td.index)
-	if td.index == 0 {
-		// if first node, signal start goroutine
-		d = td.Delay()
-		t.signal.Reset(d)
-		log.Debugf("timer: add reset delay %d ms", int64(d)/int64(xtime.Millisecond))
+	tail := t.timersTail
+	if tail == nil {
+		t.timers = td
+		t.timersTail = td
+	} else if !td.expire.Before(tail.expire) {
+		td.pre = t.timersTail
+		t.timersTail.next = td
+		t.timersTail = td
+	} else {
+		for tail != nil && tail.expire.After(td.expire) {
+			tail = tail.pre
+		}
+		if tail == nil {
+			td.next = t.timers
+			t.timers = td
+		} else {
+			td.pre = tail
+			td.next = tail.next
+		}
 	}
-	log.Debugf("timer: push item key: %s, expire: %s, index: %d", td.Key, td.ExpireString(), td.index)
+
+	// add to the minheap last node
+	if td.pre == nil {
+		// if first node, signal start goroutine
+		d := td.Delay()
+		t.signal.Reset(d)
+		//log.Debugf("add td to head, reset duration to %s", d)
+	}
+	t.timerNum++
 }
 
 func (t *Timer) del(td *TimerData) {
-	var (
-		i    = td.index
-		last = len(t.timers) - 1
-	)
-	if i < 0 || i > last || t.timers[i] != td {
-		// already remove, usually by expire
-		log.Debugf("timer del i: %d, last: %d, %p", i, last, td)
-
+	if td.fn == nil {
 		return
 	}
-	if i != last {
-		t.swap(i, last)
-		t.down(i, last)
-		t.up(i)
+	if t.timers == td {
+		t.timers = td.next
+		if t.timers != nil {
+			t.timers.pre = nil
+		}
 	}
-	// remove item is the last node
-	t.timers[last].index = -1 // for safety
-	t.timers = t.timers[:last]
-	log.Debugf("timer: remove item key: %s, expire: %s, index: %d", td.Key, td.ExpireString(), td.index)
 
+	if t.timersTail == td {
+		t.timersTail = td.pre
+		if t.timersTail != nil {
+			t.timersTail.next = nil
+		}
+	}
+
+	td.fn = nil
+	// remove item is the last node
+	t.timerNum--
 }
 
-// Set update timer data.
+// Set 更新任务的时间数据
 func (t *Timer) Set(td *TimerData, expire xtime.Duration) {
 	t.lock.Lock()
 	t.del(td)
@@ -176,9 +199,7 @@ func (t *Timer) start() {
 	}
 }
 
-// expire removes the minimum element (according to Less) from the heap.
-// The complexity is O(log(n)) where n = max.
-// It is equivalent to Del(0).
+// expire 超时执行
 func (t *Timer) expire() {
 	var (
 		fn func()
@@ -187,79 +208,23 @@ func (t *Timer) expire() {
 	)
 	t.lock.Lock()
 	for {
-		if len(t.timers) == 0 {
+		if t.timers == nil {
+			//log.Debugf("timers is nil, duration reset to NAN")
 			d = infiniteDuration
-			log.Debugf("timer: no other instance")
-
 			break
 		}
-		td = t.timers[0]
+		td = t.timers
 		if d = td.Delay(); d > 0 {
 			break
 		}
 		fn = td.fn
 		// let caller put back
 		t.del(td)
-		t.lock.Unlock()
-		if fn == nil {
-			log.Warn("expire timer no fn")
-		} else {
-			log.Debugf("timer key: %s, expire: %s, index: %d expired, call fn", td.Key, td.ExpireString(), td.index)
-			fn()
-		}
+		t.lock.Unlock() // 解锁，防止执行任务的时候，进行添加或者删除等其他任务操作，引起死锁
+
+		fn()
 		t.lock.Lock()
 	}
 	t.signal.Reset(d)
-	log.Debugf("timer: expire reset delay %d ms", int64(d)/int64(xtime.Millisecond))
-
 	t.lock.Unlock()
-}
-
-func (t *Timer) index(expire xtime.Time) (ind int, renew bool) {
-	clen := len(t.timers)
-	if clen <= 1 || !expire.Before(t.timers[clen-1].expire) {
-		renew = true
-		ind = clen
-		return
-	}
-	return
-}
-
-func (t *Timer) up(j int) {
-	for {
-		i := j - 1 // (j - 1) / 2 // parent
-		if !t.less(j, i) {
-			break
-		}
-		t.swap(i, j)
-		j = i
-	}
-}
-
-func (t *Timer) down(i, n int) {
-	for {
-		j1 := 2*i + 1
-		if j1 >= n || j1 < 0 { // j1 < 0 after int overflow
-			break
-		}
-		j := j1 // left child
-		if j2 := j1 + 1; j2 < n && !t.less(j1, j2) {
-			j = j2 // = 2*i + 2  // right child
-		}
-		if !t.less(j, i) {
-			break
-		}
-		t.swap(i, j)
-		i = j
-	}
-}
-
-func (t *Timer) less(i, j int) bool {
-	return t.timers[i].expire.Before(t.timers[j].expire)
-}
-
-func (t *Timer) swap(i, j int) {
-	t.timers[i], t.timers[j] = t.timers[j], t.timers[i]
-	t.timers[i].index = i
-	t.timers[j].index = j
 }
