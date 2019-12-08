@@ -189,6 +189,7 @@ func (client *Client) write() {
 				} else {
 					log.Warnf("[write-err] client %s, msg : %s, err: %s", client.Log(), msg, err)
 				}
+				client.closed.CAS(false, true)
 				client.FlushMessage()
 				return
 			}
