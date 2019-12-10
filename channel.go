@@ -1,20 +1,20 @@
 package meim
 
 import (
-	"bufio"
+	"io"
 	"sync"
 
 	"github.com/ipiao/meim.v2/log"
-
 	"github.com/ipiao/meim.v2/protocol"
 )
 
 var (
-	SignalReady  = &protocol.Message{}
-	SignalFinish = &protocol.Message{}
+	SignalReady  = &protocol.Proto{}
+	SignalFinish = &protocol.Proto{}
 )
 
 // Channel 消息推送器推送的时候使用，将消息传递给连接的写线程
+// 相当于client
 type Channel struct {
 	Room *Room //如果room不是nil，代表是房间的channel
 
@@ -22,9 +22,9 @@ type Channel struct {
 	Prev *Channel // 暂时只有Room使用
 
 	CliProto Ring
-	signal   chan *protocol.Message
-	Writer   bufio.Writer
-	Reader   bufio.Reader
+	signal   chan *protocol.Proto
+	Writer   io.Writer
+	Reader   io.Reader
 
 	Key      string
 	IP       string
@@ -39,7 +39,7 @@ type Channel struct {
 func NewChannel(cli, svr int) *Channel {
 	c := new(Channel)
 	c.CliProto.Init(cli)
-	c.signal = make(chan *protocol.Message, svr)
+	c.signal = make(chan *protocol.Proto, svr)
 	c.watchOps = make(map[int32]struct{})
 	return c
 }
@@ -74,7 +74,7 @@ func (c *Channel) NeedPush(op int32) bool {
 }
 
 // Push 推送一条消息
-func (c *Channel) Push(p *protocol.Message) (err error) {
+func (c *Channel) Push(p *protocol.Proto) (err error) {
 	select {
 	case c.signal <- p:
 	default:
@@ -84,7 +84,7 @@ func (c *Channel) Push(p *protocol.Message) (err error) {
 }
 
 // Ready 检查通道是否就绪或关闭
-func (c *Channel) Signal() *protocol.Message {
+func (c *Channel) Signal() *protocol.Proto {
 	return <-c.signal
 }
 

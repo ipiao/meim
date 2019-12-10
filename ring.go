@@ -16,7 +16,7 @@ type Ring struct {
 	mask uint64
 	// TODO split cacheline, many cpu cache line size is 64
 	// pad [40]byte
-	data []protocol.Message
+	data []protocol.Proto
 }
 
 // NewRing 创建一个环缓冲
@@ -40,13 +40,13 @@ func (r *Ring) init(num uint64) {
 		}
 		num = num << 1
 	}
-	r.data = make([]protocol.Message, num)
+	r.data = make([]protocol.Proto, num)
 	r.num = num
 	r.mask = r.num - 1
 }
 
 // Get 从缓冲中读取一个数据
-func (r *Ring) Get() (proto *protocol.Message, err error) {
+func (r *Ring) Get() (proto *protocol.Proto, err error) {
 	if r.rp == r.wp {
 		return nil, ErrRingEmpty
 	}
@@ -60,7 +60,7 @@ func (r *Ring) GetAdv() {
 }
 
 // Set 获取到缓冲池里面的可用缓冲
-func (r *Ring) Set() (proto *protocol.Message, err error) {
+func (r *Ring) Set() (proto *protocol.Proto, err error) {
 	if r.wp-r.rp >= r.num {
 		return nil, ErrRingFull
 	}

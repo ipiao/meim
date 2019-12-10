@@ -14,9 +14,9 @@ type Bucket struct {
 	chs     map[string]*Channel // map sub key to a channel
 
 	// room
-	rooms       map[string]*Room             // bucket room channels
-	routines    []chan *protocol.RoomMessage // 不同的通道执行房间消息发送
-	routinesNum uint64                       // 每次房间消息换一个通道
+	rooms       map[string]*Room           // bucket room channels
+	routines    []chan *protocol.RoomProto // 不同的通道执行房间消息发送
+	routinesNum uint64                     // 每次房间消息换一个通道
 
 	ipChannels map[string]int32 // 每个ip对应的通道个数
 }
@@ -38,9 +38,9 @@ func NewBucket(opts *BucketOptions) (b *Bucket) {
 	b.options = opts
 
 	b.rooms = make(map[string]*Room, opts.Room)
-	b.routines = make([]chan *protocol.RoomMessage, opts.RoutineAmount)
+	b.routines = make([]chan *protocol.RoomProto, opts.RoutineAmount)
 	for i := uint64(0); i < opts.RoutineAmount; i++ {
-		c := make(chan *protocol.RoomMessage, opts.RoutineSize)
+		c := make(chan *protocol.RoomProto, opts.RoutineSize)
 		b.routines[i] = c
 		go b.roomproc(c)
 	}
@@ -168,7 +168,7 @@ func (b *Bucket) Channel(key string) (ch *Channel) {
 }
 
 // Broadcast 广播消息到所有
-func (b *Bucket) Broadcast(p *protocol.Message, op int32) {
+func (b *Bucket) Broadcast(p *protocol.Proto, op int32) {
 	var ch *Channel
 	b.cLock.RLock()
 	for _, ch = range b.chs {
@@ -197,7 +197,7 @@ func (b *Bucket) DelRoom(room *Room) {
 }
 
 // BroadcastRoom 广播房间消息
-func (b *Bucket) BroadcastRoom(msg *protocol.RoomMessage) {
+func (b *Bucket) BroadcastRoom(msg *protocol.RoomProto) {
 	num := atomic.AddUint64(&b.routinesNum, 1) % b.options.RoutineAmount
 	b.routines[num] <- msg
 }
@@ -247,10 +247,10 @@ func (b *Bucket) UpRoomsCount(roomCountMap map[string]int32) {
 }
 
 // 房间进程，执行房间消息推送
-func (b *Bucket) roomproc(c chan *protocol.RoomMessage) {
+func (b *Bucket) roomproc(c chan *protocol.RoomProto) {
 	for {
 		arg := <-c
-		if room := b.Room(arg.RoomID); room != nil {
+		if room := b.Room(arg.RoomId); room != nil {
 			room.Push(arg.Proto)
 		}
 	}

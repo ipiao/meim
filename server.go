@@ -16,7 +16,6 @@ import (
 type Server struct {
 	cfg              *Config        // 配置
 	ln               net.Listener   //
-	clients          ClientSet      // 连接到当前服务的客户端列表
 	clientsLock      sync.RWMutex   // 客户端锁
 	lnWaitGroup      sync.WaitGroup //
 	clientsWaitGroup sync.WaitGroup //
@@ -58,7 +57,7 @@ func (s *Server) RegisterPlugin(p PluginI) {
 // Run 运行服务
 func (s *Server) Run() {
 	if s.plugin == nil {
-		s.plugin = DefaultPlugin()
+		//s.plugin = DefaultPlugin()
 	}
 	s.startShutdownListener()
 

@@ -64,7 +64,7 @@ func (r *Room) Del(ch *Channel) bool {
 }
 
 // Push 推送消息到房间，如果channel满了，就忽略
-func (r *Room) Push(p *protocol.Message) {
+func (r *Room) Push(p *protocol.Proto) {
 	r.rLock.RLock()
 	for ch := r.next; ch != nil; ch = ch.Next {
 		_ = ch.Push(p)

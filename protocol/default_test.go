@@ -1,12 +1,17 @@
 package protocol
 
-import "testing"
+import (
+	"bytes"
+	"testing"
+)
 
-func TestDefaultBody(t *testing.T) {
-	b := make(DefaultBody, 0)
-	b.FromData([]byte{1, 2, 3, 4})
-	t.Log(b)
+func TestParser(t *testing.T) {
+	dp := NewDefaultProtoParser()
 
-	d := b.ToData()
-	t.Log(d)
+	p := &Proto{
+		Ver: 1,
+		Op:  1,
+	}
+	wr := bytes.NewBuffer()
+	dp.WriteTo(wr, p)
 }

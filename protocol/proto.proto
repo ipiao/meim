@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package meim.protocol;
+option go_package = "protocol";
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+// 数据原型
+message Proto {
+    int32 ver = 1 [(gogoproto.jsontag) = "ver"];
+    int32 op = 2 [(gogoproto.jsontag) = "op"];
+    int32 seq = 3 [(gogoproto.jsontag) = "seq"];
+    int32 compress = 4 [(gogoproto.jsontag) = "compress"];
+    int32 contentType = 5 [(gogoproto.jsontag) = "contentType"];
+    bytes body = 6 [(gogoproto.jsontag) = "body"];
+}
+
+
+message RoomProto {
+    string roomId = 1;
+    Proto proto = 2;
+}

@@ -1,98 +1,107 @@
 package protocol
 
 import (
-	"encoding/binary"
 	"errors"
+	"io"
+
+	"github.com/ipiao/meim.v2/libs/encoding/binary"
 )
 
 var (
-	ErrorInvalidHeaderBuffLen     = errors.New("invalid header buff length")
-	ErrorInvalidHeaderProtocolLen = errors.New("invalid header protocol length")
+	ErrProtoBodyLen   = errors.New("invalid proto body length")
+	ErrProtoHeaderLen = errors.New("invalid proto header length")
 )
 
 const (
 	// size
 	_headerSize      = 2 // 头长，这样header和body可以不必连在一起
 	_verSize         = 2 // 版本号字长
-	_cmdSize         = 4 // 指令字长
+	_opSize          = 4 // 指令字长
 	_seqSize         = 4 // 序列号字长
 	_compressSize    = 1 // 压缩类型字长
 	_contentTypeSize = 1 // body内容类型字长
-	_bodySize        = 4 // body长
+	_bodyLenSize     = 4 // body长
 
-	_rawHeaderSize = _headerSize + _verSize + _cmdSize + _seqSize + _compressSize + _contentTypeSize + _bodySize
+	_rawHeaderSize = _headerSize + _verSize + _opSize + _seqSize + _compressSize + _contentTypeSize + _bodyLenSize
 	// offset
 	_headerOffset      = 0
 	_verOffset         = _headerOffset + _headerSize
-	_cmdOffset         = _verOffset + _verSize
-	_seqOffset         = _cmdOffset + _cmdSize
+	_opOffset          = _verOffset + _verSize
+	_seqOffset         = _opOffset + _opSize
 	_compressOffset    = _seqOffset + _seqSize
 	_contentTypeOffset = _compressOffset + _compressSize
-	_bodyOffset        = _contentTypeOffset + _contentTypeSize
+	_bodyLenOffset     = _contentTypeOffset + _contentTypeSize
 )
 
-var DefaultHeaderCreator = func() ProtoHeader {
-	return new(DefaultHeader)
+type DefaultProtoParser struct {
+	MaxBodySize int // 1<< 12
+	//pool        *buffer.Pool
 }
 
-type DefaultHeader struct {
-	ver         int16
-	cmd         int32
-	seq         int32
-	compress    int8
-	contentType int8
-	bodyLen     int32
+var _ ProtoParser = &DefaultProtoParser{}
+
+// 默认解析器
+func NewDefaultProtoParser() *DefaultProtoParser {
+	return &DefaultProtoParser{
+		MaxBodySize: 1 << 12,
+		//pool:        buffer.New(1024),
+	} // 4k
 }
 
-func (h *DefaultHeader) Len() int                        { return _rawHeaderSize }
-func (h *DefaultHeader) Ver() int16                      { return h.ver }
-func (h *DefaultHeader) SetVer(ver int16)                { h.ver = ver }
-func (h *DefaultHeader) Cmd() int32                      { return h.cmd }
-func (h *DefaultHeader) SetCmd(cmd int32)                { h.cmd = cmd }
-func (h *DefaultHeader) Seq() int32                      { return h.seq }
-func (h *DefaultHeader) SetSeq(seq int32)                { h.seq = seq }
-func (h *DefaultHeader) Compress() int8                  { return h.compress }
-func (h *DefaultHeader) SetCompress(compress int8)       { h.compress = compress }
-func (h *DefaultHeader) ContentType() int8               { return h.contentType }
-func (h *DefaultHeader) SetContentType(contentType int8) { h.contentType = contentType }
-func (h *DefaultHeader) BodyLen() int                    { return int(h.bodyLen) }
-func (h *DefaultHeader) SetBodyLen(bodyLen int)          { h.bodyLen = int32(bodyLen) }
-func (h *DefaultHeader) ToData() []byte {
-	buf := make([]byte, h.Len(), h.Len())
-	binary.BigEndian.PutUint16(buf[_headerOffset:], uint16(_rawHeaderSize))
-	binary.BigEndian.PutUint16(buf[_verOffset:], uint16(h.ver))
-	binary.BigEndian.PutUint32(buf[_cmdOffset:], uint32(h.cmd))
-	binary.BigEndian.PutUint32(buf[_seqOffset:], uint32(h.seq))
-	buf[_compressOffset] = byte(h.compress)
-	buf[_contentTypeOffset] = byte(h.contentType)
-	binary.BigEndian.PutUint32(buf[_bodyOffset:], uint32(h.bodyLen))
-	return buf
-}
-func (h *DefaultHeader) FromData(buf []byte) error {
-	if len(buf) < h.Len() {
-		return ErrorInvalidHeaderBuffLen
+func (dp *DefaultProtoParser) ReadFrom(rr io.Reader) (p *Proto, err error) {
+	var (
+		headerLen int16
+		bodyLen   int
+		buf       = make([]byte, _rawHeaderSize)
+	)
+	if _, err = io.ReadFull(rr, buf); err != nil {
+		return
 	}
-	headerLen := int(binary.BigEndian.Uint16(buf[_headerOffset:_verOffset]))
-	if headerLen != h.Len() {
-		return ErrorInvalidHeaderProtocolLen
+	p = new(Proto)
+	headerLen = binary.BigEndian.Int16(buf[_headerOffset:])
+	p.Ver = int32(binary.BigEndian.Int16(buf[_verOffset:]))
+	p.Op = binary.BigEndian.Int32(buf[_opOffset:])
+	p.Seq = binary.BigEndian.Int32(buf[_seqOffset:])
+	p.Compress = int32(buf[_compressOffset])
+	p.ContentType = int32(buf[_contentTypeOffset])
+	bodyLen = int(binary.BigEndian.Int32(buf[_bodyLenOffset:]))
+	if dp.MaxBodySize > 0 && bodyLen > dp.MaxBodySize {
+		err = ErrProtoBodyLen
+		return
 	}
-	h.ver = int16(binary.BigEndian.Uint16(buf[_verOffset:_cmdOffset]))
-	h.cmd = int32(binary.BigEndian.Uint32(buf[_cmdOffset:_seqOffset]))
-	h.seq = int32(binary.BigEndian.Uint32(buf[_seqOffset:_compressOffset]))
-	h.compress = int8(buf[_compressOffset])
-	h.contentType = int8(buf[_contentTypeOffset])
-	h.bodyLen = int32(binary.BigEndian.Uint32(buf[_bodyOffset : _bodyOffset+_bodySize]))
-	return nil
+	if headerLen != _rawHeaderSize {
+		err = ErrProtoHeaderLen
+		return
+	}
+	if bodyLen > 0 {
+		buf = make([]byte, bodyLen)
+		_, err = io.ReadFull(rr, buf)
+		p.Body = buf
+	} else {
+		p.Body = nil
+	}
+	return
 }
 
-var _ ProtoHeader = new(DefaultHeader)
+func (dp *DefaultProtoParser) WriteTo(wr io.Writer, p *Proto) (err error) {
+	var (
+		bodyLen = int32(len(p.Body))
+		buf     = make([]byte, _rawHeaderSize)
+	)
+	binary.BigEndian.PutInt16(buf[_headerOffset:], _rawHeaderSize)
+	binary.BigEndian.PutInt16(buf[_verOffset:], int16(p.Ver))
+	binary.BigEndian.PutInt32(buf[_opOffset:], p.Op)
+	binary.BigEndian.PutInt32(buf[_seqOffset:], p.Seq)
+	buf[_compressOffset] = byte(p.Compress)
+	buf[_contentTypeOffset] = byte(p.ContentType)
+	binary.BigEndian.PutInt32(buf[_bodyLenOffset:], bodyLen)
 
-type DefaultBody []byte
-
-func (b *DefaultBody) ToData() []byte {
-	return *b
-}
-func (b *DefaultBody) FromData(buf []byte) error {
-	*b = buf
-	return nil
+	if p.Body != nil {
+		newBuf := make([]byte, _rawHeaderSize+bodyLen)
+		copy(newBuf[:_rawHeaderSize], buf)
+		copy(newBuf[_rawHeaderSize:], p.Body)
+		buf = newBuf
+	}
+	_, err = wr.Write(buf)
+	return
 }
