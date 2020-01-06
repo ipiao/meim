@@ -31,6 +31,7 @@ type Client struct {
 	UID      int64       // 用户id
 	UserData interface{} // 用户其他私有数据
 	DC       DataCreator // 协议数据构建器
+	Version  int32
 }
 
 func NewClient(conn Conn) *Client {
