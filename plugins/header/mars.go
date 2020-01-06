@@ -61,6 +61,14 @@ func (h *MarsHeader) Seq() int {
 	return int(h.Sequence)
 }
 
+func (h *MarsHeader) Ver() int {
+	return int(h.Version)
+}
+
+func (h *MarsHeader) SetVer(v int) {
+	h.Version = uint32(v)
+}
+
 func (h *MarsHeader) BodyLength() int {
 	return int(h.BodyLen)
 }

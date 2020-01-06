@@ -36,6 +36,8 @@ type ProtocolHeader interface {
 	SetSeq(int)
 	BodyLength() int
 	SetBodyLength(n int)
+	Ver() int
+	SetVer(v int)
 	Clone() ProtocolHeader
 }
 
