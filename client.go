@@ -101,9 +101,10 @@ func (client *Client) EnqueueNonBlockMessage(msg *Message) bool {
 
 // 发送一般消息
 func (client *Client) FlushMessage() {
-	if !client.closed.Load() { // 防止发送端继续发送数据
-		return
+	if client.closed.CAS(false, true) {
+		client.conn.Close()
 	}
+
 	//close(client.mch)
 	//close(client.extch)
 	//for msg := range client.mch {
@@ -160,6 +161,9 @@ func (client *Client) EnsureEvent(fn func(*Client)) {
 
 func (client *Client) read() {
 	for {
+		//if client.closed.Load() {
+		//	break
+		//}
 		msg, err := ReadLimitMessage(client.conn, client.DC, 128*1024)
 		if err != nil {
 			log.Infof("client %s read error: %s", client.Log(), err)
@@ -190,7 +194,6 @@ func (client *Client) write() {
 				} else {
 					log.Warnf("[write-err] client %s, msg : %s, err: %s", client.Log(), msg, err)
 				}
-				client.closed.CAS(false, true)
 				client.FlushMessage()
 				return
 			}
@@ -206,10 +209,14 @@ func (client *Client) write() {
 	}
 }
 
+//
 func (client *Client) Close() {
-	if client.closed.CAS(false, true) {
-		log.Infof("try close client %s", client.Log())
-		client.mch <- nil
+	if !client.closed.Load() {
+		select {
+		case client.mch <- nil:
+			log.Infof("try close client %s", client.Log())
+		default:
+		}
 	}
 }
 
