@@ -100,8 +100,9 @@ func (client *Client) EnqueueNonBlockMessage(msg *Message) bool {
 }
 
 // 发送一般消息
-func (client *Client) FlushMessage() {
+func (client *Client) flushMessage() {
 	if client.closed.CAS(false, true) {
+		log.Infof("client:%s, close the real connection", client.Log())
 		client.conn.Close()
 	}
 
@@ -183,7 +184,7 @@ func (client *Client) write() {
 				if client.UID != 0 {
 					log.Infof("client:%s socket closed", client.Log())
 				}
-				client.FlushMessage()
+				client.flushMessage()
 				return
 			}
 			client.plugin.HandleBeforeWriteMessage(client, msg)
@@ -194,7 +195,7 @@ func (client *Client) write() {
 				} else {
 					log.Warnf("[write-err] client %s, msg : %s, err: %s", client.Log(), msg, err)
 				}
-				client.FlushMessage()
+				client.flushMessage()
 				return
 			}
 		case <-client.lmsch:
