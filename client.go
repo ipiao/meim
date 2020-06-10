@@ -53,6 +53,17 @@ func (client *Client) String() string {
 	return fmt.Sprintf(" uid: %d, addr: %s, data: %v", client.UID, client.conn.RemoteAddr(), client.UserData)
 }
 
+// 直接传入header和body
+func (client *Client) EnqueuePlainData(header, body []byte) bool {
+	ph := plainData(header)
+	pb := plainData(body)
+	msg := &Message{
+		Header: &ph,
+		Body:   &pb,
+	}
+	return client.EnqueueMessage(msg)
+}
+
 // 发送一般消息
 func (client *Client) EnqueueMessage(msg *Message) bool {
 	if client.closed.Load() { // 已关闭
