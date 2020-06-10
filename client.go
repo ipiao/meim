@@ -53,13 +53,12 @@ func (client *Client) String() string {
 	return fmt.Sprintf(" uid: %d, addr: %s, data: %v", client.UID, client.conn.RemoteAddr(), client.UserData)
 }
 
-// 直接传入header和body
-func (client *Client) EnqueuePlainData(header, body []byte) bool {
-	ph := plainData(header)
-	pb := plainData(body)
+// 直接传入需要的数据
+func (client *Client) EnqueueData(data []byte) bool {
+	ph := plainData(data)
 	msg := &Message{
 		Header: &ph,
-		Body:   &pb,
+		Body:   nil,
 	}
 	return client.EnqueueMessage(msg)
 }

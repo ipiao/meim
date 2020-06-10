@@ -7,6 +7,10 @@ import (
 	"github.com/ipiao/meim"
 )
 
+var (
+	_ meim.ProtocolBody = &MarsHeader{}
+)
+
 // wx mars header
 // 消息头部信息, 固定长度20
 type MarsHeader struct {
