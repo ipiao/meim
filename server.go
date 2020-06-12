@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ipiao/meim.v2/log"
+	"github.com/ipiao/meim/log"
 )
 
 // 服务

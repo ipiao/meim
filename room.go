@@ -3,7 +3,7 @@ package meim
 import (
 	"sync"
 
-	"github.com/ipiao/meim.v2/protocol"
+	"github.com/ipiao/meim/protocol"
 )
 
 // Room 存放房间里面的所有channel

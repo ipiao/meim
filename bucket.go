@@ -4,8 +4,19 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/ipiao/meim.v2/protocol"
+	"github.com/ipiao/meim/protocol"
 )
+
+// bucket 初始化配置可选项
+type BucketOptions struct {
+	// Bucket is bucket config.
+	Size    int // bucket数量
+	Channel int // channel初始化数量
+
+	Room          int    // room初始化数量
+	RoutineAmount uint64 // room的后台推送线程数量
+	RoutineSize   int    // room每个推送线程的缓冲大小
+}
 
 // Bucket 统一管理通道
 type Bucket struct {
@@ -16,18 +27,9 @@ type Bucket struct {
 	// room
 	rooms       map[string]*Room           // bucket room channels
 	routines    []chan *protocol.RoomProto // 不同的通道执行房间消息发送
-	routinesNum uint64                     // 每次房间消息换一个通道
+	routinesNum uint64                     // 用作计数，每次房间消息轮询换一个通道
 
 	ipChannels map[string]int32 // 每个ip对应的通道个数
-}
-
-type BucketOptions struct {
-	// Bucket is bucket config.
-	Size          int
-	Channel       int
-	Room          int
-	RoutineAmount uint64
-	RoutineSize   int
 }
 
 // NewBucket new 新建bucket，存放连接的channel
@@ -42,12 +44,12 @@ func NewBucket(opts *BucketOptions) (b *Bucket) {
 	for i := uint64(0); i < opts.RoutineAmount; i++ {
 		c := make(chan *protocol.RoomProto, opts.RoutineSize)
 		b.routines[i] = c
-		go b.roomproc(c)
+		go b.roomProc(c)
 	}
 	return
 }
 
-// ChannelCount 通道数量，相当连接数
+// ChannelCount 通道数量，相当个人连接数
 func (b *Bucket) ChannelCount() int {
 	return len(b.chs)
 }
@@ -57,8 +59,8 @@ func (b *Bucket) RoomCount() int {
 	return len(b.rooms)
 }
 
-// RoomsCount 获取所有房间的在线数量
-func (b *Bucket) RoomsCount() (res map[string]int32) {
+// RoomsCount 获取所有房间的当前节点在线数量
+func (b *Bucket) EachRoomsCount() (res map[string]int32) {
 	var (
 		roomID string
 		room   *Room
@@ -233,7 +235,7 @@ func (b *Bucket) IPCount() (res map[string]struct{}) {
 	return
 }
 
-// UpRoomsCount 上传房间人数
+// UpRoomsCount 更新房间总人数，非单个节点
 func (b *Bucket) UpRoomsCount(roomCountMap map[string]int32) {
 	var (
 		roomID string
@@ -247,7 +249,7 @@ func (b *Bucket) UpRoomsCount(roomCountMap map[string]int32) {
 }
 
 // 房间进程，执行房间消息推送
-func (b *Bucket) roomproc(c chan *protocol.RoomProto) {
+func (b *Bucket) roomProc(c chan *protocol.RoomProto) {
 	for {
 		arg := <-c
 		if room := b.Room(arg.RoomId); room != nil {

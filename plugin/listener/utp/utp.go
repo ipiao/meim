@@ -4,7 +4,7 @@ import (
 	"net"
 
 	"github.com/anacrolix/utp"
-	meim "github.com/ipiao/meim.v2"
+	meim "github.com/ipiao/meim"
 )
 
 func init() {

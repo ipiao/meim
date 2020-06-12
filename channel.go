@@ -4,8 +4,8 @@ import (
 	"io"
 	"sync"
 
-	"github.com/ipiao/meim.v2/log"
-	"github.com/ipiao/meim.v2/protocol"
+	"github.com/ipiao/meim/log"
+	"github.com/ipiao/meim/protocol"
 )
 
 var (

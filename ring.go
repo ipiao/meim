@@ -1,7 +1,7 @@
 package meim
 
 import (
-	"github.com/ipiao/meim.v2/protocol"
+	"github.com/ipiao/meim/protocol"
 )
 
 // Ring ring proto buffer.

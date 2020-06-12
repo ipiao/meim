@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	meim "github.com/ipiao/meim.v2"
+	meim "github.com/ipiao/meim"
 	reuseport "github.com/kavu/go_reuseport"
 )
 

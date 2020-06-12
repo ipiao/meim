@@ -3,7 +3,7 @@ package client
 import (
 	"net"
 
-	meim "github.com/ipiao/meim.v2"
+	meim "github.com/ipiao/meim"
 )
 
 // TODO: dialer for listener

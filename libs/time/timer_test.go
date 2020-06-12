@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ipiao/meim.v2/log"
+	"github.com/ipiao/meim/log"
 )
 
 func getJob(i int) func() {

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net"
 
-	meim "github.com/ipiao/meim.v2"
+	meim "github.com/ipiao/meim"
 	quicconn "github.com/marten-seemann/quic-conn"
 )
 

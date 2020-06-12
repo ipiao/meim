@@ -3,11 +3,11 @@ package main
 import (
 	"time"
 
-	"github.com/ipiao/meim.v2/protocol"
+	"github.com/ipiao/meim/protocol"
 
-	meim "github.com/ipiao/meim.v2"
-	"github.com/ipiao/meim.v2/client"
-	"github.com/ipiao/meim.v2/log"
+	meim "github.com/ipiao/meim"
+	"github.com/ipiao/meim/client"
+	"github.com/ipiao/meim/log"
 )
 
 func main() {

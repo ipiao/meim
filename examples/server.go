@@ -1,9 +1,9 @@
 package main
 
 import (
-	meim "github.com/ipiao/meim.v2"
-	"github.com/ipiao/meim.v2/log"
-	"github.com/ipiao/meim.v2/protocol"
+	meim "github.com/ipiao/meim"
+	"github.com/ipiao/meim/log"
+	"github.com/ipiao/meim/protocol"
 )
 
 func main() {

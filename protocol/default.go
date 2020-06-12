@@ -4,7 +4,7 @@ import (
 	"errors"
 	"io"
 
-	"github.com/ipiao/meim.v2/libs/encoding/binary"
+	"github.com/ipiao/meim/libs/encoding/binary"
 )
 
 var (

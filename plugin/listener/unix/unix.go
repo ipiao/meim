@@ -3,7 +3,7 @@ package unix
 import (
 	"net"
 
-	meim "github.com/ipiao/meim.v2"
+	meim "github.com/ipiao/meim"
 )
 
 func init() {
