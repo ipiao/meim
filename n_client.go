@@ -18,3 +18,7 @@ type Client struct {
 	Version  int16       // 版本
 	UserData interface{} // 用户其他私有数据
 }
+
+func NewClient() {
+
+}

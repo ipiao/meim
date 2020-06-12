@@ -235,8 +235,8 @@ func (b *Bucket) IPCount() (res map[string]struct{}) {
 	return
 }
 
-// UpRoomsCount 更新房间总人数，非单个节点
-func (b *Bucket) UpRoomsCount(roomCountMap map[string]int32) {
+// UpRoomsCount 更新房间总人数,因为一个节点只有能力记录自己节点的数量
+func (b *Bucket) UpdateRoomsCount(roomCountMap map[string]int32) {
 	var (
 		roomID string
 		room   *Room

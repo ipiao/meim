@@ -15,7 +15,6 @@ message Proto {
     bytes body = 6 [(gogoproto.jsontag) = "body"];
 }
 
-
 message RoomProto {
     string roomId = 1;
     Proto proto = 2;

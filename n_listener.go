@@ -8,7 +8,7 @@ import (
 )
 
 // listener
-type ListenerMaker func(s *Config) (ln net.Listener, err error)
+type ListenerMaker func(s *NetworkConfig) (ln net.Listener, err error)
 
 // 监听器创建方法
 var listenerMakers = make(map[string]ListenerMaker)
@@ -29,7 +29,7 @@ func init() {
 }
 
 func tcpListenerMaker(network string) ListenerMaker {
-	return func(cfg *Config) (ln net.Listener, err error) {
+	return func(cfg *NetworkConfig) (ln net.Listener, err error) {
 		if cfg.TlsConfig == nil {
 			ln, err = net.Listen(network, cfg.Address)
 		} else {

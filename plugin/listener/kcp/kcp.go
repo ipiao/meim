@@ -12,7 +12,7 @@ func init() {
 	meim.RegisterListenerMaker("kcp", kcpListenerMaker)
 }
 
-func kcpListenerMaker(cfg *meim.Config) (ln net.Listener, err error) {
+func kcpListenerMaker(cfg *meim.NetworkConfig) (ln net.Listener, err error) {
 	if cfg.Options == nil || cfg.Options["BlockCrypt"] == nil {
 		return nil, errors.New("KCP BlockCrypt must be configured in cfg.Options")
 	}

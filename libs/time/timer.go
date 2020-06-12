@@ -49,6 +49,10 @@ func NewTimer(num int) (t *Timer) {
 	return t
 }
 
+func (t Timer) Init(num int) {
+	t.init(num)
+}
+
 func (t *Timer) init(num int) {
 	t.signal = xtime.NewTimer(infiniteDuration)
 	t.num = num

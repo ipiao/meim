@@ -10,7 +10,7 @@ func init() {
 	meim.RegisterListenerMaker("unix", unixListenerMaker)
 }
 
-func unixListenerMaker(cfg *meim.Config) (ln net.Listener, err error) {
+func unixListenerMaker(cfg *meim.NetworkConfig) (ln net.Listener, err error) {
 	laddr, err := net.ResolveUnixAddr("unix", cfg.Address)
 	if err != nil {
 		return nil, err

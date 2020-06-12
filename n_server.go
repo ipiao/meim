@@ -14,20 +14,20 @@ import (
 
 // 服务
 type Server struct {
-	cfg              *Config        // 配置
+	cfg              *NetworkConfig // 配置
 	ln               net.Listener   //
 	clientsLock      sync.RWMutex   // 客户端锁
 	lnWaitGroup      sync.WaitGroup //
+	clients          ClientSet
 	clientsWaitGroup sync.WaitGroup //
 	closeSignal      chan bool      // 接收进程结束信号
-
-	plugin     PluginI
-	pluginOnce sync.Once
+	plugin           PluginI
+	pluginOnce       sync.Once
 }
 
 // 新键服务，必须要有地址
 func NewServer(addr string, opts ...ConfigOption) *Server {
-	cfg := &Config{
+	cfg := &NetworkConfig{
 		Address: addr,
 	}
 	for _, opt := range opts {
@@ -37,7 +37,7 @@ func NewServer(addr string, opts ...ConfigOption) *Server {
 }
 
 // 带配置
-func NewServerWithConfig(cfg *Config) *Server {
+func NewServerWithConfig(cfg *NetworkConfig) *Server {
 	cfg.Init()
 	s := &Server{
 		cfg:         cfg,
@@ -85,15 +85,15 @@ func (s *Server) startShutdownListener() {
 }
 
 func (s *Server) makeListener() (ln net.Listener, err error) {
-	ml := listenerMakers[s.cfg.Network]
+	ml := listenerMakers[s.cfg.Protocol]
 	if ml == nil {
-		return nil, fmt.Errorf("can not make listener of %s", s.cfg.Network)
+		return nil, fmt.Errorf("can not make listener of %s", s.cfg.Protocol)
 	}
 	return ml(s.cfg)
 }
 
 func (s *Server) serveListener() {
-	log.Infof("start listener: %s@%s...", s.cfg.Network, s.cfg.Address)
+	log.Infof("start listener: %s@%s...", s.cfg.Protocol, s.cfg.Address)
 	s.lnWaitGroup.Add(1)
 	defer s.lnWaitGroup.Done()
 	var tempDelay time.Duration

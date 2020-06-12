@@ -12,7 +12,7 @@ func init() {
 	meim.RegisterListenerMaker("quic", quicListenerMaker)
 }
 
-func quicListenerMaker(cfg *meim.Config) (ln net.Listener, err error) {
+func quicListenerMaker(cfg *meim.NetworkConfig) (ln net.Listener, err error) {
 	if cfg.TlsConfig == nil {
 		return nil, errors.New("TlsConfig must be configured in cfg")
 	}

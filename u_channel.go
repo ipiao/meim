@@ -84,12 +84,12 @@ func (c *Channel) Push(p *protocol.Proto) (err error) {
 }
 
 // Ready 检查通道是否就绪或关闭
-func (c *Channel) Signal() *protocol.Proto {
+func (c *Channel) Ready() *protocol.Proto {
 	return <-c.signal
 }
 
 // Signal 发送就绪信号到通道
-func (c *Channel) Ready() {
+func (c *Channel) Signal() {
 	c.signal <- SignalReady
 }
 

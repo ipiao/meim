@@ -13,7 +13,7 @@ func init() {
 	meim.RegisterListenerMaker("reuseport", reuseportListenerMaker)
 }
 
-func reuseportListenerMaker(cfg *meim.Config) (ln net.Listener, err error) {
+func reuseportListenerMaker(cfg *meim.NetworkConfig) (ln net.Listener, err error) {
 	var network string
 	if validIP4(cfg.Address) {
 		network = "tcp4"

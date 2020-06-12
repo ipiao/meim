@@ -19,8 +19,8 @@ var (
 	DefaultEnqueueTimeout        = time.Second * 5
 )
 
-type Config struct {
-	Network        string                 // 网络类型
+type NetworkConfig struct {
+	Protocol       string                 // 网络类型
 	Address        string                 // 监听地址
 	MaxConnections int                    // 最大连接数
 	TlsConfig      *tls.Config            // tls配置
@@ -28,9 +28,9 @@ type Config struct {
 	ClientConfig
 }
 
-func (c *Config) Init() {
-	if c.Network == "" {
-		c.Network = "tcp"
+func (c *NetworkConfig) Init() {
+	if c.Protocol == "" {
+		c.Protocol = "tcp"
 	}
 	if c.Address == "" {
 		log.Fatal("can not start server with empty listener address")
@@ -80,11 +80,11 @@ func (c *ClientConfig) Init() {
 }
 
 // ConfigOption 对服务的参数进行插入式配置
-type ConfigOption func(*Config)
+type ConfigOption func(*NetworkConfig)
 
 // WithOptions 注入自定义的参数
 func WithOptions(ops map[string]interface{}) ConfigOption {
-	return func(c *Config) {
+	return func(c *NetworkConfig) {
 		if c.Options == nil {
 			c.Options = make(map[string]interface{})
 		}
@@ -94,44 +94,44 @@ func WithOptions(ops map[string]interface{}) ConfigOption {
 	}
 }
 
-// WithTLSConfig sets tls.Config.
+// WithTLSConfig sets tls.NetworkConfig.
 func WithTLSConfig(cfg *tls.Config) ConfigOption {
-	return func(c *Config) {
+	return func(c *NetworkConfig) {
 		c.TlsConfig = cfg
 	}
 }
 
 // WithReadTimeout sets readTimeout.
 func WithReadTimeout(readTimeout time.Duration) ConfigOption {
-	return func(c *Config) {
+	return func(c *NetworkConfig) {
 		c.ReadTimeout = readTimeout
 	}
 }
 
 // WithWriteTimeout sets writeTimeout.
 func WithWriteTimeout(writeTimeout time.Duration) ConfigOption {
-	return func(c *Config) {
+	return func(c *NetworkConfig) {
 		c.WriteTimeout = writeTimeout
 	}
 }
 
 // WithMaxConn sets maxConn.
 func WithMaxConnections(n int) ConfigOption {
-	return func(c *Config) {
+	return func(c *NetworkConfig) {
 		c.MaxConnections = n
 	}
 }
 
 // WithWriteTimeout sets writeTimeout.
 func WithNetwork(network string) ConfigOption {
-	return func(c *Config) {
-		c.Network = network
+	return func(c *NetworkConfig) {
+		c.Protocol = network
 	}
 }
 
 // WithListenAddress sets listener addr.
 func WithListenAddress(addr string) ConfigOption {
-	return func(c *Config) {
+	return func(c *NetworkConfig) {
 		c.Address = addr
 	}
 }
