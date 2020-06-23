@@ -1,33 +1,26 @@
 package conf
 
+import "crypto/tls"
+
 // 提炼conf好单独管理
 // Config is comet config.
 type Config struct {
 	Debug    bool // 用作开启调试
 	ServerID string
-
-	TCP       *TCP
-	Websocket *Websocket
-	Bucket    *Bucket
-	Round     *Round
-	Channel   *Channel
+	Networks []*Network
+	Bucket   *Bucket
+	Round    *Round
+	Channel  *Channel
 }
 
-// TCP is tcp config.
-type TCP struct {
+type Network struct {
+	Protocol  string // 协议类型, tcp,ws
 	Bind      []string
+	TlsConfig *tls.Config // tls配置
 	Sndbuf    int
 	Rcvbuf    int
 	KeepAlive bool
-}
-
-// Websocket is websocket config.
-type Websocket struct {
-	Bind        []string
-	TLSOpen     bool
-	TLSBind     []string
-	CertFile    string
-	PrivateFile string
+	Accept    int
 }
 
 // bucket 初始化配置可选项
@@ -56,3 +49,5 @@ type Channel struct {
 	SvrProto int
 	CliProto int
 }
+
+var Conf = &Config{}

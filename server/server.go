@@ -52,7 +52,7 @@ func (s *Server) Close() (err error) {
 	return
 }
 
-// 定期更新房间的实际数量
+// 定期更新房间的实际总数量
 func (s *Server) onlineproc() {
 	for {
 		var (
@@ -66,12 +66,12 @@ func (s *Server) onlineproc() {
 			}
 		}
 		if allRoomsCount, err = Handler.RenewOnlineCount(); err != nil {
-			time.Sleep(time.Second)
+			time.Sleep(time.Second * 3)
 			continue
 		}
 		for _, bucket := range s.buckets {
 			bucket.UpdateRoomsCount(allRoomsCount)
 		}
-		time.Sleep(time.Second * 10)
+		time.Sleep(time.Second * 30)
 	}
 }

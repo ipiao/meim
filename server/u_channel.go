@@ -1,10 +1,10 @@
 package server
 
 import (
-	"io"
 	"sync"
 
 	"github.com/ipiao/meim/conf"
+	"github.com/ipiao/meim/libs/bufio"
 	"github.com/ipiao/meim/log"
 	"github.com/ipiao/meim/protocol"
 )
@@ -24,8 +24,8 @@ type Channel struct {
 
 	CliProto Ring
 	signal   chan *protocol.Proto
-	Writer   io.Writer
-	Reader   io.Reader
+	Writer   bufio.Writer
+	Reader   bufio.Reader
 
 	Key      string
 	IP       string
