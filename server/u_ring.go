@@ -1,6 +1,7 @@
-package meim
+package server
 
 import (
+	"github.com/ipiao/meim"
 	"github.com/ipiao/meim/protocol"
 )
 
@@ -48,7 +49,7 @@ func (r *Ring) init(num uint64) {
 // Get 从缓冲中读取一个数据
 func (r *Ring) Get() (proto *protocol.Proto, err error) {
 	if r.rp == r.wp {
-		return nil, ErrRingEmpty
+		return nil, meim.ErrRingEmpty
 	}
 	proto = &r.data[r.rp&r.mask]
 	return
@@ -62,7 +63,7 @@ func (r *Ring) GetAdv() {
 // Set 获取到缓冲池里面的可用缓冲
 func (r *Ring) Set() (proto *protocol.Proto, err error) {
 	if r.wp-r.rp >= r.num {
-		return nil, ErrRingFull
+		return nil, meim.ErrRingFull
 	}
 	proto = &r.data[r.wp&r.mask]
 	return

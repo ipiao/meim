@@ -1,32 +1,21 @@
-package meim
+package server
 
 import (
+	"github.com/ipiao/meim/conf"
 	"github.com/ipiao/meim/libs/bytes"
 	"github.com/ipiao/meim/libs/time"
 )
 
-// RoundOptions round options.
-type RoundOptions struct {
-	Timer        int
-	TimerSize    int
-	Reader       int
-	ReadBuf      int
-	ReadBufSize  int
-	Writer       int
-	WriteBuf     int
-	WriteBufSize int
-}
-
-// Round userd for connection round-robin get a reader/writer/timer for split big lock.
+// Round used for connection round-robin get a reader/writer/timer for split big lock.
 type Round struct {
 	readers []bytes.Pool
 	writers []bytes.Pool
 	timers  []time.Timer
-	options *RoundOptions
+	options conf.Round
 }
 
 // NewRound new a round struct.
-func NewRound(opts *RoundOptions) (r *Round) {
+func NewRound(opts conf.Round) (r *Round) {
 	var i int
 	r = &Round{options: opts}
 	// reader

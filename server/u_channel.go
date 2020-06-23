@@ -1,9 +1,10 @@
-package meim
+package server
 
 import (
 	"io"
 	"sync"
 
+	"github.com/ipiao/meim/conf"
 	"github.com/ipiao/meim/log"
 	"github.com/ipiao/meim/protocol"
 )
@@ -36,10 +37,10 @@ type Channel struct {
 // NewChannel 创建一个通道
 // cli 消息缓冲环大小
 // svr 信号接收缓冲
-func NewChannel(cli, svr int) *Channel {
+func NewChannel(opt conf.Channel) *Channel { // 不带指针，利于GC
 	c := new(Channel)
-	c.CliProto.Init(cli)
-	c.signal = make(chan *protocol.Proto, svr)
+	c.CliProto.Init(opt.CliProto)
+	c.signal = make(chan *protocol.Proto, opt.SvrProto)
 	c.watchOps = make(map[int32]struct{})
 	return c
 }

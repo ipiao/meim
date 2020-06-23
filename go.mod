@@ -18,6 +18,7 @@ require (
 	github.com/tjfoc/gmsm v1.3.2 // indirect
 	github.com/xtaci/kcp-go v5.4.20+incompatible
 	github.com/xtaci/lossyconn v0.0.0-20200209145036-adba10fffc37 // indirect
+	github.com/zhenjl/cityhash v0.0.0-20131128155616-cdd6a94144ab
 	go.uber.org/atomic v1.6.0
 	gopkg.in/yaml.v2 v2.3.0
 )

@@ -3,11 +3,12 @@ package meim
 import (
 	"sync"
 
+	"github.com/ipiao/meim/server"
 	"go.uber.org/atomic"
 )
 
 type Client struct {
-	Channel
+	server.Channel
 	PluginI
 	cfg ClientConfig
 	// 使用chan提供简单的缓冲、同步功能（在业务中如果做了相应的功能就可以直接使用WriteMessage）

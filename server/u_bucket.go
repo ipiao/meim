@@ -1,26 +1,16 @@
-package meim
+package server
 
 import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/ipiao/meim/conf"
 	"github.com/ipiao/meim/protocol"
 )
 
-// bucket 初始化配置可选项
-type BucketOptions struct {
-	// Bucket is bucket config.
-	Size    int // bucket数量
-	Channel int // channel初始化数量
-
-	Room          int    // room初始化数量
-	RoutineAmount uint64 // room的后台推送线程数量
-	RoutineSize   int    // room每个推送线程的缓冲大小
-}
-
 // Bucket 统一管理通道
 type Bucket struct {
-	options *BucketOptions
+	options *conf.Bucket
 	cLock   sync.RWMutex        // protect the channels for chs
 	chs     map[string]*Channel // map sub key to a channel
 
@@ -33,7 +23,7 @@ type Bucket struct {
 }
 
 // NewBucket new 新建bucket，存放连接的channel
-func NewBucket(opts *BucketOptions) (b *Bucket) {
+func NewBucket(opts *conf.Bucket) (b *Bucket) {
 	b = new(Bucket)
 	b.chs = make(map[string]*Channel, opts.Channel)
 	b.ipChannels = make(map[string]int32)

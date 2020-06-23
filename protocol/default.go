@@ -38,8 +38,6 @@ type DefaultProtoParser struct {
 	//pool        *buffer.Pool
 }
 
-var _ ProtoParser = &DefaultProtoParser{}
-
 // 默认解析器
 func NewDefaultProtoParser() *DefaultProtoParser {
 	return &DefaultProtoParser{

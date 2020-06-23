@@ -1,8 +1,9 @@
-package meim
+package server
 
 import (
 	"sync"
 
+	"github.com/ipiao/meim"
 	"github.com/ipiao/meim/protocol"
 )
 
@@ -38,7 +39,7 @@ func (r *Room) Put(ch *Channel) (err error) {
 		r.next = ch // insert to header
 		r.Online++
 	} else {
-		err = ErrRoomDropped
+		err = meim.ErrRoomDropped
 	}
 	r.rLock.Unlock()
 	return
