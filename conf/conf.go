@@ -1,16 +1,28 @@
 package conf
 
-import "crypto/tls"
+import (
+	"crypto/tls"
+
+	xtime "github.com/ipiao/meim/libs/time"
+)
 
 // 提炼conf好单独管理
 // Config is comet config.
 type Config struct {
 	Debug    bool // 用作开启调试
 	ServerID string
+
+	Protocol *Protocol
 	Networks []*Network
 	Bucket   *Bucket
 	Round    *Round
 	Channel  *Channel
+}
+
+type Protocol struct {
+	HandshakeTimeout     xtime.Duration
+	MinHeartbeatInterval xtime.Duration
+	MaxHeartbeatInterval xtime.Duration
 }
 
 type Network struct {

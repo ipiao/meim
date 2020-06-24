@@ -1,9 +1,11 @@
 package server
 
 import (
+	"math/rand"
 	"time"
 
 	"github.com/ipiao/meim/conf"
+	xtime "github.com/ipiao/meim/libs/time"
 	"github.com/ipiao/meim/log"
 	"github.com/zhenjl/cityhash"
 )
@@ -45,6 +47,12 @@ func (s *Server) Bucket(subKey string) *Bucket {
 		log.Infof("%s hit channel bucket index: %d use cityhash", subKey, idx)
 	}
 	return s.buckets[idx]
+}
+
+// RandServerHeartbeat 获取随机心跳超时时间
+func (s *Server) RandServerHeartbeat() time.Duration {
+	return time.Duration(s.c.Protocol.MinHeartbeatInterval +
+		xtime.Duration(rand.Int63n(int64(s.c.Protocol.MaxHeartbeatInterval-s.c.Protocol.MinHeartbeatInterval))))
 }
 
 // Close close the server.

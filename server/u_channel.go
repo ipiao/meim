@@ -32,6 +32,9 @@ type Channel struct {
 	Mid      int64
 	watchOps map[int32]struct{}
 	mutex    sync.RWMutex
+
+	// 推荐自己重新定义用户结构保存自己的用户数据
+	// UserData interface{} // 自定义的用户数据信息
 }
 
 // NewChannel 创建一个通道

@@ -19,5 +19,5 @@ func ReadFrom(rr io.Reader) (p *Proto, err error) {
 	return ProtoParser.ReadFrom(rr)
 }
 func WriteTo(wr io.Writer, p *Proto) (err error) {
-	return ProtoParser.WriteTo(rr)
+	return ProtoParser.WriteTo(wr, p)
 }
