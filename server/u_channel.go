@@ -1,10 +1,12 @@
 package server
 
 import (
+	"context"
+	"net"
 	"sync"
 
-	"github.com/ipiao/meim/conf"
 	"github.com/ipiao/meim/libs/bufio"
+	"github.com/ipiao/meim/libs/bytes"
 	"github.com/ipiao/meim/log"
 	"github.com/ipiao/meim/protocol"
 )
@@ -22,10 +24,13 @@ type Channel struct {
 	Next *Channel // 暂时只有Room使用
 	Prev *Channel // 暂时只有Room使用
 
-	CliProto Ring
-	signal   chan *protocol.Proto
-	Writer   bufio.Writer
-	Reader   bufio.Reader
+	CliProto Ring                 // 客户单数据环，Ring控制了读写差异，不至于在某条消息的处理结果一直得不到返回的情况下，读处理还在继续
+	signal   chan *protocol.Proto // 信号流，主动推
+
+	rb     *bytes.Buffer
+	wb     *bytes.Buffer
+	Writer bufio.Writer
+	Reader bufio.Reader
 
 	Key      string
 	IP       string
@@ -33,18 +38,24 @@ type Channel struct {
 	watchOps map[int32]struct{}
 	mutex    sync.RWMutex
 
-	// 推荐自己重新定义用户结构保存自己的用户数据
-	// UserData interface{} // 自定义的用户数据信息
+	CID int             // channel的连接索引，用于轮训索引
+	Ctx context.Context // 用户上下文
 }
 
 // NewChannel 创建一个通道
 // cli 消息缓冲环大小
 // svr 信号接收缓冲
-func NewChannel(opt conf.Channel) *Channel { // 不带指针，利于GC
+func NewChannel(ctx context.Context, conn net.Conn, rb, wb *bytes.Buffer, cid, srvProto, cliProto int) *Channel { // 不带指针，利于GC
 	c := new(Channel)
-	c.CliProto.Init(opt.CliProto)
-	c.signal = make(chan *protocol.Proto, opt.SvrProto)
+	c.CliProto.Init(cliProto)
+	c.signal = make(chan *protocol.Proto, srvProto)
 	c.watchOps = make(map[int32]struct{})
+	c.CID = cid
+	c.Ctx = ctx
+	c.rb = rb
+	c.wb = wb
+	c.Reader.ResetBuffer(conn, rb.Bytes())
+	c.Writer.ResetBuffer(conn, wb.Bytes())
 	return c
 }
 

@@ -1,7 +1,6 @@
 package server
 
 import (
-	"bufio"
 	"context"
 	"io"
 	"net"
@@ -9,6 +8,7 @@ import (
 	"time"
 
 	"github.com/ipiao/meim/conf"
+	"github.com/ipiao/meim/libs/bufio"
 	"github.com/ipiao/meim/libs/bytes"
 	xtime "github.com/ipiao/meim/libs/time"
 	"github.com/ipiao/meim/log"
@@ -90,31 +90,30 @@ func serveConn(s *Server, conn net.Conn, r int) {
 		lAddr = conn.LocalAddr().String()
 		rAddr = conn.RemoteAddr().String()
 	)
-	log.Infof("start serve \"%s\" with \"%s\"", lAddr, rAddr)
+
+	log.Infof("start serve \"%s\" with \"%s\", cid %d", lAddr, rAddr, r)
+
 	s.ServeConn(conn, rp, wp, tr)
 }
 
 // ServeConn 具体处理连接中的消息
 func (s *Server) ServeConn(conn net.Conn, rp, wp *bytes.Pool, tr *xtime.Timer) {
 	var (
-		err     error
-		rid     string
-		accepts []int32
-		hb      time.Duration
-		p       *protocol.Proto
-		b       *Bucket
-		trd     *xtime.TimerData
-		lastHb  = time.Now()
-		rb      = rp.Get()
-		wb      = wp.Get()
-		ch      = NewChannel(*s.c.Channel)
-		rr      = &ch.Reader
-		wr      = &ch.Writer
+		err error
+		p   *protocol.Proto
+		trd *xtime.TimerData
+		rb  = rp.Get()
+		wb  = wp.Get()
+		ch  = NewChannel(*s.c.Channel)
+		rr  = &ch.Reader
+		wr  = &ch.Writer
 	)
 	ch.Reader.ResetBuffer(conn, rb.Bytes())
 	ch.Writer.ResetBuffer(conn, wb.Bytes())
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	ch.Ctx = ctx
 
 	// handshake
 	step := 0
@@ -138,21 +137,12 @@ func (s *Server) ServeConn(conn net.Conn, rp, wp *bytes.Pool, tr *xtime.Timer) {
 				log.Warnf("tcp request operation(%d) not auth", p.Op)
 			}
 		}
-		if authed = Handler.AuthChannel(ch, p); authed {
+		if authed = Handler.HandleAuth(ch, p); authed {
 			//b=
-		}
-
-		if ch.Mid, ch.Key, rid, accepts, hb, err = s.authTCP(ctx, rr, wr, p); err == nil {
-			ch.Watch(accepts...)
-			b = s.Bucket(ch.Key)
-			err = b.Put(rid, ch)
-			if conf.Conf.Debug {
-				log.Infof("tcp connected key:%s mid:%d proto:%+v", ch.Key, ch.Mid, p)
-			}
 		}
 	}
 	step = 2
-	if err != nil {
+	if !authed {
 		conn.Close()
 		rp.Put(rb)
 		wp.Put(wb)
@@ -166,33 +156,15 @@ func (s *Server) ServeConn(conn net.Conn, rp, wp *bytes.Pool, tr *xtime.Timer) {
 	step = 3
 	// handshake ok start dispatch goroutine
 	go s.dispatchConn(conn, wr, wp, wb, ch)
-	serverHeartbeat := s.RandServerHearbeat()
 	for {
 		if p, err = ch.CliProto.Set(); err != nil {
 			break
 		}
+
 		if p, err = protocol.ReadFrom(rr); err != nil {
 			break
 		}
-		if p.Op == grpc.OpHeartbeat {
-			tr.Set(trd, hb)
-			p.Op = grpc.OpHeartbeatReply
-			p.Body = nil
-			// NOTE: send server heartbeat for a long time
-			if now := time.Now(); now.Sub(lastHb) > serverHeartbeat {
-				if err1 := s.Heartbeat(ctx, ch.Mid, ch.Key); err1 == nil {
-					lastHb = now
-				}
-			}
-			if conf.Conf.Debug {
-				log.Infof("tcp heartbeat receive key:%s, mid:%d", ch.Key, ch.Mid)
-			}
-			step++
-		} else {
-			if err = s.Operate(ctx, p, ch, b); err != nil {
-				break
-			}
-		}
+		Handler.HandleProto(ch, p)
 		ch.CliProto.SetAdv()
 		ch.Signal()
 	}
@@ -204,12 +176,9 @@ func (s *Server) ServeConn(conn net.Conn, rp, wp *bytes.Pool, tr *xtime.Timer) {
 	rp.Put(rb)
 	conn.Close()
 	ch.Close()
-	if err = s.Disconnect(ctx, ch.Mid, ch.Key); err != nil {
-		log.Errorf("key: %s mid: %d operator do disconnect error(%v)", ch.Key, ch.Mid, err)
-	}
-	if conf.Conf.Debug {
-		log.Infof("tcp disconnected key: %s mid: %d", ch.Key, ch.Mid)
-	}
+	Handler.HandleClosed(ch)
+	log.Infof("tcp disconnected key: %s mid: %d", ch.Key, ch.Mid)
+
 }
 
 // dispatchConn 负责将消息写会到conn中，是write线程
