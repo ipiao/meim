@@ -4,10 +4,9 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/ipiao/meim/libs/utils"
-
 	"github.com/ipiao/meim/conf"
 	xtime "github.com/ipiao/meim/libs/time"
+	"github.com/ipiao/meim/libs/utils"
 	"github.com/ipiao/meim/log"
 	"github.com/zhenjl/cityhash"
 )
@@ -34,7 +33,7 @@ func NewServer(c *conf.Config) *Server {
 		s.buckets[i] = NewBucket(c.Bucket)
 	}
 	s.serverID = c.ServerID
-	s.unid = utils.NewUniqueId(1000, 999999999)
+	s.unid = utils.NewUniqueId(1000, 1<<31-1)
 	go s.onlineproc()
 	return s
 }

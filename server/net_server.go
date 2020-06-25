@@ -4,19 +4,12 @@ import (
 	"context"
 	"io"
 	"net"
-	"strings"
 	"time"
 
 	"github.com/ipiao/meim/conf"
-	"github.com/ipiao/meim/libs/bufio"
-	"github.com/ipiao/meim/libs/bytes"
 	xtime "github.com/ipiao/meim/libs/time"
 	"github.com/ipiao/meim/log"
 	"github.com/ipiao/meim/protocol"
-)
-
-const (
-	maxInt = 1<<31 - 1
 )
 
 // InitNetworks 开启监听连接
@@ -87,39 +80,135 @@ func serveConn(s *Server, conn net.Conn) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	ch := NewChannel(ctx, conn, rp.Get(), wp.Get(), cid, s.c.Channel.SvrProto, s.c.Channel.CliProto)
-	s.ServeChannel(ch)
+	_ = s.ServeChannel(ch)
 }
 
 // ServeConn 具体处理连接中的消息
-func (s *Server) ServeChannel(ch *Channel) {
+func (s *Server) ServeChannel(ch *Channel) (err error) {
+	// 首先握手，握手失败了直接返回
+	// 握手成功了进入正常流程
+	if err = s.handshakeChannel(ch); err != nil {
+		return
+	}
 
+	// 握手成功后的执行流程
+	var (
+		// timer
+		p *protocol.Proto
+		//lastHb  = time.Now()
+		rr = &ch.Reader
+	)
+
+	// 异步处理写
+	go s.dispatchChannel(ch)
+	// 处理读
+	for {
+		if p, err = ch.CliProto.Set(); err != nil {
+			break
+		}
+		if p, err = protocol.ReadFrom(rr); err != nil {
+			break
+		}
+		if err = Handler.HandleProto(ch, p); err != nil {
+			break
+		}
+		ch.CliProto.SetAdv()
+		ch.Signal()
+	}
+	// 处理非连接错误
+	if _, ok := err.(net.Error); ok || err == io.EOF {
+		log.Debugf("key: %s server tcp failed error(%v)", ch.Key, err)
+	} else {
+		log.Errorf("key: %s server tcp failed error(%v)", ch.Key, err)
+	}
+
+	s.round.Reader(ch.CID).Put(ch.rb) // 读线程显示归还读资源
+	ch.Close()                        // 给写通知写线程结束
+	return
+}
+
+// dispatchConn 负责将消息写会到conn中，是write线程
+func (s *Server) dispatchChannel(ch *Channel) {
+	var (
+		err    error
+		finish bool
+		wr     = &ch.Writer
+	)
+	log.Debugf("key: %s start dispatch tcp goroutine", ch.Key)
+	for {
+		var p = ch.Ready()
+		log.Infof("key:%s dispatch msg:%v", ch.Key, *p)
+		switch p {
+		case SignalFinish:
+			log.Debugf("key: %s wakeup exit dispatch goroutine", ch.Key)
+			finish = true
+			goto failed
+		case SignalReady:
+			// 读到请求返回，从proto中获取返回
+			for {
+				if p, err = ch.CliProto.Get(); err != nil {
+					break
+				}
+				if err = protocol.WriteTo(wr, p); err != nil {
+					goto failed
+				}
+				p.Body = nil // avoid memory leak
+				ch.CliProto.GetAdv()
+			}
+		default:
+			// server send
+			if err = protocol.WriteTo(wr, p); err != nil {
+				goto failed
+			}
+			log.Debugf("tcp sent a message key:%s mid:%d proto:%+v", ch.Key, ch.Mid, p)
+		}
+		// 直接刷缓存
+		if err = wr.Flush(); err != nil {
+			break
+		}
+	}
+failed:
+	if err != nil {
+		log.Errorf("key: %s dispatch tcp error(%v)", ch.Key, err)
+	}
+
+	// 在实际结束前，处理一些任务
+	Handler.HandleClosed(ch)
+
+	// 一般是客户端主动断开，所以是先读退出，然后处理写退出，所以在写线程做最后的关闭处理
+	s.Bucket(ch.Key).Del(ch) //
+	_ = ch.conn.Close()      // 关闭底层连接，这样读线程也会结束
+
+	s.round.Writer(ch.CID).Put(ch.wb) // 归还写资源
+	// must ensure all channel message discard, for reader won't blocking Signal
+	for !finish {
+		finish = ch.Ready() == SignalFinish
+	}
+	log.Infof("key: %s dispatch goroutine exit", ch.Key)
+}
+
+func (s *Server) handshakeChannel(ch *Channel) (err error) {
 	// ip addr
 	var (
-		err error
 		trd *xtime.TimerData
 		// timer
 		p  *protocol.Proto
-		hb time.Duration
-		//lastHb  = time.Now()
-		b  *Bucket
 		tr = s.round.Timer(ch.CID)
 		rp = s.round.Reader(ch.CID)
 		wp = s.round.Writer(ch.CID)
+		rr = &ch.Reader
 	)
 
-	rr := &ch.Reader
-	wr := &ch.Writer
 	// handshake
 	step := 0
 	trd = tr.Add(time.Duration(s.c.Protocol.HandshakeTimeout), func() {
-		ch.conn.Close()
+		_ = ch.conn.Close()
 		log.Errorf("key: %s remoteIP: %s step: %d tcp handshake timeout", ch.Key, ch.conn.RemoteAddr().String(), step)
 	})
 
 	// must not setadv, only used in auth
+	// 握手认证过程
 	step = 1
-
-	// TODO 独立封装
 	if p, err = ch.CliProto.Set(); err == nil {
 		for {
 			if p, err = protocol.ReadFrom(rr); err != nil {
@@ -133,114 +222,24 @@ func (s *Server) ServeChannel(ch *Channel) {
 		}
 		var rid string
 		var accepts []int32
-		if ch.Mid, ch.Key, rid, accepts, hb, err = Handler.HandleAuth(ch, p); err == nil {
+		if ch.Mid, ch.Key, rid, accepts, _, err = Handler.HandleAuth(ch, p); err == nil {
 			ch.Watch(accepts...)
-			b = s.Bucket(ch.Key)
-			err = b.Put(rid, ch)
+			err = s.Bucket(ch.Key).Put(rid, ch)
 			log.Infof("tcp connected key:%s mid:%d proto:%+v", ch.Key, ch.Mid, p)
 		}
-
 	}
 
 	step = 2
+	tr.Del(trd)
+
 	if err != nil {
-		ch.conn.Close()
+		_ = ch.conn.Close()
 		rp.Put(ch.rb)
 		wp.Put(ch.wb)
-		tr.Del(trd)
 		log.Errorf("key: %s handshake failed error(%v)", ch.Key, err)
-		return
-	}
-	trd.Key = ch.Key
-	tr.Set(trd, hb)
 
-	step = 3
-	// handshake ok start dispatch goroutine
-	go s.dispatchConn(ch.conn, wr, wp, ch.wb, ch)
-	for {
-		if p, err = ch.CliProto.Set(); err != nil {
-			break
-		}
-
-		if p, err = protocol.ReadFrom(rr); err != nil {
-			break
-		}
-		if err = Handler.HandleProto(ch, p); err != nil {
-			break
-		}
-		ch.CliProto.SetAdv()
-		ch.Signal()
+		//Handler.HandleClosed(ch)
+		//log.Infof("tcp disconnected key: %s mid: %d", ch.Key, ch.Mid)
 	}
-	if err != io.EOF && !strings.Contains(err.Error(), "closed") {
-		log.Errorf("key: %s server tcp failed error(%v)", ch.Key, err)
-	}
-	b.Del(ch)
-	tr.Del(trd)
-	rp.Put(ch.rb)
-	ch.conn.Close()
-	ch.Close()
-	Handler.HandleClosed(ch)
-	log.Infof("tcp disconnected key: %s mid: %d", ch.Key, ch.Mid)
-
-}
-
-// dispatchConn 负责将消息写会到conn中，是write线程
-func (s *Server) dispatchConn(conn net.Conn, wr *bufio.Writer, wp *bytes.Pool, wb *bytes.Buffer, ch *Channel) {
-	var (
-		err    error
-		finish bool
-	)
-	if conf.Conf.Debug {
-		log.Infof("key: %s start dispatch tcp goroutine", ch.Key)
-	}
-	for {
-		var p = ch.Ready()
-		if conf.Conf.Debug {
-			log.Infof("key:%s dispatch msg:%v", ch.Key, *p)
-		}
-		switch p {
-		case SignalFinish:
-			if conf.Conf.Debug {
-				log.Infof("key: %s wakeup exit dispatch goroutine", ch.Key)
-			}
-			finish = true
-			goto failed
-		case SignalReady:
-			// fetch message from svrbox(client send)
-			for {
-				if p, err = ch.CliProto.Get(); err != nil {
-					break
-				}
-				// TODO
-				p.Body = nil // avoid memory leak
-				ch.CliProto.GetAdv()
-			}
-		default:
-			// server send
-			if err = protocol.WriteTo(wr, p); err != nil {
-				goto failed
-			}
-			if conf.Conf.Debug {
-				log.Infof("tcp sent a message key:%s mid:%d proto:%+v", ch.Key, ch.Mid, p)
-			}
-		}
-		// only hungry flush response
-		if err = wr.Flush(); err != nil {
-			break
-		}
-	}
-failed:
-	if err != nil {
-		log.Errorf("key: %s dispatch tcp error(%v)", ch.Key, err)
-	}
-
-	conn.Close()
-	wp.Put(wb)
-	// must ensure all channel message discard, for reader won't blocking Signal
-	for !finish {
-		finish = ch.Ready() == SignalFinish
-	}
-	if conf.Conf.Debug {
-		log.Infof("key: %s dispatch goroutine exit", ch.Key)
-	}
+	return
 }
