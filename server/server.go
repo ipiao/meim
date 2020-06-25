@@ -4,6 +4,8 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/ipiao/meim/libs/utils"
+
 	"github.com/ipiao/meim/conf"
 	xtime "github.com/ipiao/meim/libs/time"
 	"github.com/ipiao/meim/log"
@@ -16,6 +18,7 @@ type Server struct {
 	buckets   []*Bucket // subkey bucket
 	bucketIdx uint32
 	serverID  string
+	unid      *utils.UniqueId
 }
 
 // NewServer returns a new Server.
@@ -31,6 +34,7 @@ func NewServer(c *conf.Config) *Server {
 		s.buckets[i] = NewBucket(c.Bucket)
 	}
 	s.serverID = c.ServerID
+	s.unid = utils.NewUniqueId(1000, 999999999)
 	go s.onlineproc()
 	return s
 }

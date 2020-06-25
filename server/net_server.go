@@ -49,7 +49,6 @@ func acceptNetListener(server *Server, network *conf.Network, lis net.Listener) 
 	var (
 		conn net.Conn
 		err  error
-		r    int
 	)
 	for {
 		if conn, err = lis.Accept(); err != nil {
@@ -72,60 +71,55 @@ func acceptNetListener(server *Server, network *conf.Network, lis net.Listener) 
 			}
 		}
 
-		go serveConn(server, conn, r)
-		if r++; r == maxInt {
-			r = 0
-		}
+		go serveConn(server, conn)
 	}
 }
 
-// 处理连接
-func serveConn(s *Server, conn net.Conn, r int) {
+func serveConn(s *Server, conn net.Conn) {
 	var (
-		// timer
-		tr = s.round.Timer(r)
-		rp = s.round.Reader(r)
-		wp = s.round.Writer(r)
-		// ip addr
+		cid   = int(s.unid.Generate())
 		lAddr = conn.LocalAddr().String()
 		rAddr = conn.RemoteAddr().String()
+		rp    = s.round.Reader(cid)
+		wp    = s.round.Writer(cid)
 	)
-
-	log.Infof("start serve \"%s\" with \"%s\", cid %d", lAddr, rAddr, r)
-
-	s.ServeConn(conn, rp, wp, tr)
+	log.Infof("start serve \"%s\" with \"%s\", cid %d", lAddr, rAddr, cid)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ch := NewChannel(ctx, conn, rp.Get(), wp.Get(), cid, s.c.Channel.SvrProto, s.c.Channel.CliProto)
+	s.ServeChannel(ch)
 }
 
 // ServeConn 具体处理连接中的消息
-func (s *Server) ServeConn(conn net.Conn, rp, wp *bytes.Pool, tr *xtime.Timer) {
+func (s *Server) ServeChannel(ch *Channel) {
+
+	// ip addr
 	var (
 		err error
-		p   *protocol.Proto
 		trd *xtime.TimerData
-		rb  = rp.Get()
-		wb  = wp.Get()
-		ch  = NewChannel(*s.c.Channel)
-		rr  = &ch.Reader
-		wr  = &ch.Writer
+		// timer
+		p  *protocol.Proto
+		hb time.Duration
+		//lastHb  = time.Now()
+		b  *Bucket
+		tr = s.round.Timer(ch.CID)
+		rp = s.round.Reader(ch.CID)
+		wp = s.round.Writer(ch.CID)
 	)
-	ch.Reader.ResetBuffer(conn, rb.Bytes())
-	ch.Writer.ResetBuffer(conn, wb.Bytes())
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	ch.Ctx = ctx
-
+	rr := &ch.Reader
+	wr := &ch.Writer
 	// handshake
 	step := 0
-	authed := false
 	trd = tr.Add(time.Duration(s.c.Protocol.HandshakeTimeout), func() {
-		conn.Close()
-		log.Errorf("key: %s remoteIP: %s step: %d tcp handshake timeout", ch.Key, conn.RemoteAddr().String(), step)
+		ch.conn.Close()
+		log.Errorf("key: %s remoteIP: %s step: %d tcp handshake timeout", ch.Key, ch.conn.RemoteAddr().String(), step)
 	})
 
-	ch.IP, _, _ = net.SplitHostPort(conn.RemoteAddr().String())
 	// must not setadv, only used in auth
 	step = 1
+
+	// TODO 独立封装
 	if p, err = ch.CliProto.Set(); err == nil {
 		for {
 			if p, err = protocol.ReadFrom(rr); err != nil {
@@ -137,15 +131,22 @@ func (s *Server) ServeConn(conn net.Conn, rp, wp *bytes.Pool, tr *xtime.Timer) {
 				log.Warnf("tcp request operation(%d) not auth", p.Op)
 			}
 		}
-		if authed = Handler.HandleAuth(ch, p); authed {
-			//b=
+		var rid string
+		var accepts []int32
+		if ch.Mid, ch.Key, rid, accepts, hb, err = Handler.HandleAuth(ch, p); err == nil {
+			ch.Watch(accepts...)
+			b = s.Bucket(ch.Key)
+			err = b.Put(rid, ch)
+			log.Infof("tcp connected key:%s mid:%d proto:%+v", ch.Key, ch.Mid, p)
 		}
+
 	}
+
 	step = 2
-	if !authed {
-		conn.Close()
-		rp.Put(rb)
-		wp.Put(wb)
+	if err != nil {
+		ch.conn.Close()
+		rp.Put(ch.rb)
+		wp.Put(ch.wb)
 		tr.Del(trd)
 		log.Errorf("key: %s handshake failed error(%v)", ch.Key, err)
 		return
@@ -155,7 +156,7 @@ func (s *Server) ServeConn(conn net.Conn, rp, wp *bytes.Pool, tr *xtime.Timer) {
 
 	step = 3
 	// handshake ok start dispatch goroutine
-	go s.dispatchConn(conn, wr, wp, wb, ch)
+	go s.dispatchConn(ch.conn, wr, wp, ch.wb, ch)
 	for {
 		if p, err = ch.CliProto.Set(); err != nil {
 			break
@@ -164,17 +165,19 @@ func (s *Server) ServeConn(conn net.Conn, rp, wp *bytes.Pool, tr *xtime.Timer) {
 		if p, err = protocol.ReadFrom(rr); err != nil {
 			break
 		}
-		Handler.HandleProto(ch, p)
+		if err = Handler.HandleProto(ch, p); err != nil {
+			break
+		}
 		ch.CliProto.SetAdv()
 		ch.Signal()
 	}
-	if err != nil && err != io.EOF && !strings.Contains(err.Error(), "closed") {
+	if err != io.EOF && !strings.Contains(err.Error(), "closed") {
 		log.Errorf("key: %s server tcp failed error(%v)", ch.Key, err)
 	}
 	b.Del(ch)
 	tr.Del(trd)
-	rp.Put(rb)
-	conn.Close()
+	rp.Put(ch.rb)
+	ch.conn.Close()
 	ch.Close()
 	Handler.HandleClosed(ch)
 	log.Infof("tcp disconnected key: %s mid: %d", ch.Key, ch.Mid)

@@ -27,6 +27,7 @@ type Channel struct {
 	CliProto Ring                 // 客户单数据环，Ring控制了读写差异，不至于在某条消息的处理结果一直得不到返回的情况下，读处理还在继续
 	signal   chan *protocol.Proto // 信号流，主动推
 
+	conn   net.Conn // 原始网络连接
 	rb     *bytes.Buffer
 	wb     *bytes.Buffer
 	Writer bufio.Writer
@@ -52,10 +53,12 @@ func NewChannel(ctx context.Context, conn net.Conn, rb, wb *bytes.Buffer, cid, s
 	c.watchOps = make(map[int32]struct{})
 	c.CID = cid
 	c.Ctx = ctx
+	c.conn = conn
 	c.rb = rb
 	c.wb = wb
 	c.Reader.ResetBuffer(conn, rb.Bytes())
 	c.Writer.ResetBuffer(conn, wb.Bytes())
+	c.IP, _, _ = net.SplitHostPort(conn.RemoteAddr().String())
 	return c
 }
 
