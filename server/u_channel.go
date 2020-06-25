@@ -27,7 +27,9 @@ type Channel struct {
 	CliProto Ring                 // 客户单数据环，Ring控制了读写差异，不至于在某条消息的处理结果一直得不到返回的情况下，读处理还在继续
 	signal   chan *protocol.Proto // 信号流，主动推
 
-	conn   net.Conn // 原始网络连接
+	conn net.Conn // 原始网络连接
+
+	// rb、wb仅作为记录以待回收，不要使用他们
 	rb     *bytes.Buffer
 	wb     *bytes.Buffer
 	Writer bufio.Writer
@@ -41,6 +43,10 @@ type Channel struct {
 
 	CID int             // channel的连接索引，用于轮训索引
 	Ctx context.Context // 用户上下文
+}
+
+func (c *Channel) String() string {
+
 }
 
 // NewChannel 创建一个通道

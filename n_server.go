@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/ipiao/meim/log"
+	"github.com/ipiao/meim/server"
 )
 
 // 服务
@@ -131,7 +132,7 @@ func (s *Server) handleNetConn(conn net.Conn) {
 		return
 	}
 
-	netConn := NewNetConn(conn, s.cfg.ReadTimeout, s.cfg.WriteTimeout)
+	netConn := server.NewNetConn(conn, s.cfg.ReadTimeout, s.cfg.WriteTimeout)
 	client := NewClient(netConn, s.cfg.ClientConfig, s.plugin)
 	s.clients.Add(client)
 	s.clientsLock.Unlock()

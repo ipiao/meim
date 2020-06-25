@@ -1,4 +1,4 @@
-package meim
+package server
 
 import (
 	"net"
@@ -7,6 +7,7 @@ import (
 	"github.com/ipiao/meim/log"
 )
 
+// TODO
 // 为什么不直接用net.Conn?
 // 考虑后期兼容 websocket.Conn等其他情况
 type Conn interface {

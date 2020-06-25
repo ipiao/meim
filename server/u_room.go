@@ -73,7 +73,8 @@ func (r *Room) Push(p *protocol.Proto) {
 	r.rLock.RUnlock()
 }
 
-// Close 关闭房间
+// TODO
+// Close 关闭房间,这里表示channel必须处在房间之中
 func (r *Room) Close() {
 	r.rLock.RLock()
 	for ch := r.next; ch != nil; ch = ch.Next {
