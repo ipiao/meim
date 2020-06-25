@@ -1,15 +1,16 @@
 package meim
 
-import (
-	"github.com/ipiao/meim/protocol"
-)
-
-type PluginI interface {
-	protocol.ProtoParser
-	HandleMessage(client *Client, message *protocol.Proto)
-	HandleOnWriteError(client *Client, message *protocol.Proto, err error) bool // 在写消息出错时候处理
-	HandleBeforeWriteMessage(client *Client, message *protocol.Proto)
-}
+//
+//import (
+//	"github.com/ipiao/meim/protocol"
+//)
+//
+//type PluginI interface {
+//	protocol.ProtoParser
+//	HandleMessage(client *Client, message *protocol.Proto)
+//	HandleOnWriteError(client *Client, message *protocol.Proto, err error) bool // 在写消息出错时候处理
+//	HandleBeforeWriteMessage(client *Client, message *protocol.Proto)
+//}
 
 //
 //var _ PluginI = DefaultPlugin()
