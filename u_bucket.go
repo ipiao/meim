@@ -5,14 +5,15 @@ import (
 	"sync/atomic"
 
 	"github.com/ipiao/meim/conf"
+
 	"github.com/ipiao/meim/protocol"
 )
 
 // Bucket 统一管理通道
 type Bucket struct {
-	options *conf.Bucket
-	cLock   sync.RWMutex        // protect the channels for chs
-	chs     map[string]*Channel // map sub key to a channel
+	options *Bucket
+	cLock   sync.RWMutex             // protect the channels for chs
+	chs     map[string]*conf.Channel // map sub key to a channel
 
 	// room
 	rooms       map[string]*Room           // bucket room channels
@@ -23,9 +24,9 @@ type Bucket struct {
 }
 
 // NewBucket new 新建bucket，存放连接的channel
-func NewBucket(opts *conf.Bucket) (b *Bucket) {
+func NewBucket(opts *Bucket) (b *Bucket) {
 	b = new(Bucket)
-	b.chs = make(map[string]*Channel, opts.Channel)
+	b.chs = make(map[string]*conf.Channel, opts.Channel)
 	b.ipChannels = make(map[string]int32)
 	b.options = opts
 
@@ -67,7 +68,7 @@ func (b *Bucket) EachRoomsCount() (res map[string]int32) {
 }
 
 // ChangeRoom 进入或者离开房间
-func (b *Bucket) ChangeRoom(newRid string, ch *Channel) (err error) {
+func (b *Bucket) ChangeRoom(newRid string, ch *conf.Channel) (err error) {
 	var (
 		newRoom *Room
 		ok      bool
@@ -98,7 +99,7 @@ func (b *Bucket) ChangeRoom(newRid string, ch *Channel) (err error) {
 }
 
 // Put 存放一个新channel
-func (b *Bucket) Put(rid string, ch *Channel) (err error) {
+func (b *Bucket) Put(rid string, ch *conf.Channel) (err error) {
 	var (
 		room *Room
 		ok   bool
@@ -125,10 +126,10 @@ func (b *Bucket) Put(rid string, ch *Channel) (err error) {
 }
 
 // Del 删除channel
-func (b *Bucket) Del(dch *Channel) {
+func (b *Bucket) Del(dch *conf.Channel) {
 	var (
 		ok   bool
-		ch   *Channel
+		ch   *conf.Channel
 		room *Room
 	)
 	b.cLock.Lock()
@@ -152,7 +153,7 @@ func (b *Bucket) Del(dch *Channel) {
 }
 
 // Channel 通过key获取channel
-func (b *Bucket) Channel(key string) (ch *Channel) {
+func (b *Bucket) Channel(key string) (ch *conf.Channel) {
 	b.cLock.RLock()
 	ch = b.chs[key]
 	b.cLock.RUnlock()
@@ -161,7 +162,7 @@ func (b *Bucket) Channel(key string) (ch *Channel) {
 
 // Broadcast 广播消息到所有
 func (b *Bucket) Broadcast(p *protocol.Proto, op int32) {
-	var ch *Channel
+	var ch *conf.Channel
 	b.cLock.RLock()
 	for _, ch = range b.chs {
 		if !ch.NeedPush(op) {

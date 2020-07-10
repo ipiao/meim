@@ -3,6 +3,8 @@ package meim
 import (
 	"sync"
 
+	"github.com/ipiao/meim/conf"
+
 	"github.com/ipiao/meim/protocol"
 )
 
@@ -10,7 +12,7 @@ import (
 type Room struct {
 	ID        string
 	rLock     sync.RWMutex
-	next      *Channel
+	next      *conf.Channel
 	dropped   bool
 	Online    int32 // dirty read is ok
 	AllOnline int32
@@ -27,7 +29,7 @@ func NewRoom(id string) (r *Room) {
 }
 
 // Put 将channel放进room
-func (r *Room) Put(ch *Channel) (err error) {
+func (r *Room) Put(ch *conf.Channel) (err error) {
 	r.rLock.Lock()
 	if !r.dropped {
 		if r.next != nil {
@@ -45,7 +47,7 @@ func (r *Room) Put(ch *Channel) (err error) {
 }
 
 // Del 从room里面删除一个channel，返回房间是否没人了
-func (r *Room) Del(ch *Channel) bool {
+func (r *Room) Del(ch *conf.Channel) bool {
 	r.rLock.Lock()
 	if ch.Next != nil {
 		// if not footer

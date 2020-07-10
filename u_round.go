@@ -1,7 +1,6 @@
 package meim
 
 import (
-	"github.com/ipiao/meim/conf"
 	"github.com/ipiao/meim/libs/bytes"
 	"github.com/ipiao/meim/libs/time"
 )
@@ -11,11 +10,11 @@ type Round struct {
 	readers []bytes.Pool
 	writers []bytes.Pool
 	timers  []time.Timer
-	options conf.Round
+	options Round
 }
 
 // NewRound new a round struct.
-func NewRound(opts conf.Round) (r *Round) {
+func NewRound(opts Round) (r *Round) {
 	var i int
 	r = &Round{options: opts}
 	// reader

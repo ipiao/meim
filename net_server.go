@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ipiao/meim/conf"
+
 	xtime "github.com/ipiao/meim/libs/time"
 	"github.com/ipiao/meim/log"
 	"github.com/ipiao/meim/protocol"
@@ -101,7 +102,7 @@ func serveConn(s *Server, conn net.Conn) {
 }
 
 // ServeConn 具体处理连接中的消息
-func (s *Server) ServeChannel(ch *Channel) (err error) {
+func (s *Server) ServeChannel(ch *conf.Channel) (err error) {
 	// 首先握手，握手失败了直接返回
 	// 握手成功了进入正常流程
 	if err = s.handshakeChannel(ch); err != nil {
@@ -148,7 +149,7 @@ func (s *Server) ServeChannel(ch *Channel) (err error) {
 }
 
 // dispatchConn 负责将消息写会到conn中，是write线程
-func (s *Server) dispatchChannel(ch *Channel) {
+func (s *Server) dispatchChannel(ch *conf.Channel) {
 	var (
 		err    error
 		finish bool
@@ -208,7 +209,7 @@ failed:
 	log.Infof("key: %s dispatch goroutine exit", ch.Key)
 }
 
-func (s *Server) handshakeChannel(ch *Channel) (err error) {
+func (s *Server) handshakeChannel(ch *conf.Channel) (err error) {
 	// ip addr
 	var (
 		trd *xtime.TimerData

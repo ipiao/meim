@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ipiao/meim/conf"
+
 	"github.com/ipiao/meim/libs/netutil"
 	xtime "github.com/ipiao/meim/libs/time"
 	"github.com/ipiao/meim/libs/utils"
@@ -17,8 +18,8 @@ type Server struct {
 	c          *conf.Config
 	wg         sync.WaitGroup // wait for all channel close when server closed
 	backoff    netutil.BackOff
-	round      *Round    // accept round store
-	buckets    []*Bucket // subkey bucket
+	round      *conf.Round    // accept round store
+	buckets    []*conf.Bucket // subkey bucket
 	bucketSize uint32
 	serverID   string
 	unid       *utils.UniqueId
@@ -39,7 +40,7 @@ func NewServer(c *conf.Config) *Server {
 		},
 	}
 	// init bucket
-	s.buckets = make([]*Bucket, c.Bucket.Size)
+	s.buckets = make([]*conf.Bucket, c.Bucket.Size)
 	s.bucketSize = uint32(c.Bucket.Size)
 	for i := 0; i < c.Bucket.Size; i++ {
 		s.buckets[i] = NewBucket(c.Bucket)
@@ -56,12 +57,12 @@ func (s *Server) Run() {
 }
 
 // Buckets return all buckets.
-func (s *Server) Buckets() []*Bucket {
+func (s *Server) Buckets() []*conf.Bucket {
 	return s.buckets
 }
 
 // Bucket get the bucket by subkey.
-func (s *Server) Bucket(subKey string) *Bucket {
+func (s *Server) Bucket(subKey string) *conf.Bucket {
 	idx := cityhash.CityHash32([]byte(subKey), uint32(len(subKey))) % s.bucketSize
 	if s.c.Debug {
 		log.Infof("%s hit channel bucket index: %d use cityhash", subKey, idx)

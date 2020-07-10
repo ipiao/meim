@@ -3,8 +3,9 @@ package main
 import (
 	"flag"
 
-	"github.com/ipiao/meim"
 	"github.com/ipiao/meim/conf"
+
+	"github.com/ipiao/meim"
 )
 
 func main() {
