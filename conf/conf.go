@@ -2,6 +2,7 @@ package conf
 
 import (
 	"crypto/tls"
+	"time"
 
 	xtime "github.com/ipiao/meim/libs/time"
 )
@@ -62,4 +63,46 @@ type Channel struct {
 	CliProto int
 }
 
-var Conf = &Config{}
+var Conf = Default()
+
+// Default new a config with specified defualt value.
+func Default() *Config {
+	return &Config{
+		Debug:    true,
+		ServerID: "1",
+		Protocol: &Protocol{
+			HandshakeTimeout:     xtime.Duration(time.Second * 15),
+			MinHeartbeatInterval: xtime.Duration(time.Second * 10),
+			MaxHeartbeatInterval: xtime.Duration(time.Second * 30),
+		},
+		Networks: []*Network{{
+			Protocol:  "tcp",
+			Bind:      []string{"0.0.0.0:5678"},
+			Sndbuf:    4096,
+			Rcvbuf:    4096,
+			KeepAlive: false,
+			Accept:    1,
+		}},
+		Bucket: &Bucket{
+			Size:          2,
+			Channel:       128,
+			Room:          16,
+			RoutineAmount: 4,
+			RoutineSize:   64,
+		},
+		Round: &Round{
+			Timer:        8,
+			TimerSize:    1024,
+			Reader:       32,
+			ReadBuf:      1024,
+			ReadBufSize:  8192,
+			Writer:       32,
+			WriteBuf:     1024,
+			WriteBufSize: 8192,
+		},
+		Channel: &Channel{
+			SvrProto: 16,
+			CliProto: 16,
+		},
+	}
+}

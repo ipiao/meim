@@ -47,7 +47,7 @@ type Channel struct {
 }
 
 func (c *Channel) String() string {
-	return fmt.Sprintf("mid: %d,cid: %s,key %s, addr: %s", c.Mid, c.CID, c.Key, c.conn.RemoteAddr().String())
+	return fmt.Sprintf("[mid:%d, cid:%d, key:%s, addr:%s]", c.Mid, c.CID, c.Key, c.conn.RemoteAddr().String())
 }
 
 // NewChannel 创建一个通道

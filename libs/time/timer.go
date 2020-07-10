@@ -49,7 +49,7 @@ func NewTimer(num int) (t *Timer) {
 	return t
 }
 
-func (t Timer) Init(num int) {
+func (t *Timer) Init(num int) {
 	t.init(num)
 }
 

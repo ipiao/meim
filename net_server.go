@@ -256,7 +256,7 @@ func (s *Server) handshakeChannel(ch *Channel) (err error) {
 		_ = ch.conn.Close()
 		rp.Put(ch.rb)
 		wp.Put(ch.wb)
-		log.Errorf("key: %s handshake failed error(%v)", ch.Key, err)
+		log.Warnf("channel %s, handshake failed error(%v)", ch, err)
 
 		//Handler.HandleClosed(ch)
 		//log.Infof("tcp disconnected key: %s mid: %d", ch.Key, ch.Mid)

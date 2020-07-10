@@ -1,10 +1,10 @@
 package meim
 
 import (
+	"errors"
 	"time"
 
 	"github.com/ipiao/meim/log"
-
 	"github.com/ipiao/meim/protocol"
 )
 
@@ -27,12 +27,12 @@ func (h *DefaultHandler) RenewOnlineCount() (map[string]int32, error) {
 	return nil, nil
 }
 func (h *DefaultHandler) HandleAuth(ch *Channel, p *protocol.Proto) (mid int64, key, rid string, accepts []int32, hb time.Duration, err error) {
-	log.Infof("=====HandleAuth=====, channel: %s, proto:", ch, p)
-
+	log.Infof("=====HandleAuth=====, channel: %s, proto: %s", ch, p)
+	err = errors.New("not authed")
 	return
 }
 func (h *DefaultHandler) HandleProto(ch *Channel, p *protocol.Proto) error {
-	log.Infof("=====HandleProto=====, channel: %s, proto:", ch, p)
+	log.Infof("=====HandleProto=====, channel: %s, proto: %s", ch, p)
 	return nil
 }
 func (h *DefaultHandler) HandleClosed(ch *Channel) {

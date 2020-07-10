@@ -2,6 +2,7 @@ package log
 
 import (
 	"fmt"
+	"log"
 
 	glog "github.com/golang/glog"
 )
@@ -36,7 +37,9 @@ func Fatal(args ...interface{})                 { logger.Fatal(args...) }
 func Fatalf(format string, args ...interface{}) { logger.Fatalf(format, args...) }
 func Flush()                                    { logger.Flush() }
 
-func init() { logger = new(glogger) }
+func init() {
+	logger = new(stdLogger)
+}
 
 type glogger struct{}
 
@@ -51,3 +54,24 @@ func (l *glogger) Errorf(format string, args ...interface{}) { glog.Errorf(forma
 func (l *glogger) Fatal(args ...interface{})                 { glog.Fatal(args...) }
 func (l *glogger) Fatalf(format string, args ...interface{}) { glog.Fatalf(format, args...) }
 func (l *glogger) Flush()                                    { glog.Flush() }
+
+type stdLogger struct {
+}
+
+func (l *stdLogger) Debug(args ...interface{}) { log.Println("[DEBUG] ", args) }
+func (l *stdLogger) Debugf(format string, args ...interface{}) {
+	log.Printf("[DEBUG] "+format, args...)
+}
+func (l *stdLogger) Info(args ...interface{})                 { log.Println("[INFO] ", args) }
+func (l *stdLogger) Infof(format string, args ...interface{}) { log.Printf("[INFO] "+format, args...) }
+func (l *stdLogger) Warn(args ...interface{})                 { log.Println("[WARN] ", args) }
+func (l *stdLogger) Warnf(format string, args ...interface{}) { log.Printf("[WARN] "+format, args...) }
+func (l *stdLogger) Error(args ...interface{})                { log.Println("[ERROR] ", args) }
+func (l *stdLogger) Errorf(format string, args ...interface{}) {
+	log.Printf("[ERROR] "+format, args...)
+}
+func (l *stdLogger) Fatal(args ...interface{}) { log.Fatal(args...) }
+func (l *stdLogger) Fatalf(format string, args ...interface{}) {
+	log.Fatalf(format, args...)
+}
+func (l *stdLogger) Flush() {}
