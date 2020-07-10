@@ -1,4 +1,4 @@
-package server
+package meim
 
 import (
 	"math/rand"
@@ -76,7 +76,7 @@ func (s *Server) onlineproc() {
 				roomCount[roomID] += count
 			}
 		}
-		if allRoomsCount, err = Handler.RenewOnlineCount(); err != nil {
+		if allRoomsCount, err = RenewOnlineCount(); err != nil {
 			time.Sleep(time.Second * 3)
 			continue
 		}

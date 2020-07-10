@@ -1,4 +1,4 @@
-package server
+package meim
 
 import (
 	"context"
@@ -109,7 +109,7 @@ func (s *Server) ServeChannel(ch *Channel) (err error) {
 		if p, err = protocol.ReadFrom(rr); err != nil {
 			break
 		}
-		if err = Handler.HandleProto(ch, p); err != nil {
+		if err = HandleProto(ch, p); err != nil {
 			break
 		}
 		ch.CliProto.SetAdv()
@@ -173,7 +173,7 @@ failed:
 	}
 
 	// 在实际结束前，处理一些任务
-	Handler.HandleClosed(ch)
+	HandleClosed(ch)
 
 	// 一般是客户端主动断开，所以是先读退出，然后处理写退出，所以在写线程做最后的关闭处理
 	s.Bucket(ch.Key).Del(ch) //
@@ -222,7 +222,7 @@ func (s *Server) handshakeChannel(ch *Channel) (err error) {
 		}
 		var rid string
 		var accepts []int32
-		if ch.Mid, ch.Key, rid, accepts, _, err = Handler.HandleAuth(ch, p); err == nil {
+		if ch.Mid, ch.Key, rid, accepts, _, err = HandleAuth(ch, p); err == nil {
 			ch.Watch(accepts...)
 			err = s.Bucket(ch.Key).Put(rid, ch)
 			log.Infof("tcp connected key:%s mid:%d proto:%+v", ch.Key, ch.Mid, p)
