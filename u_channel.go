@@ -2,6 +2,7 @@ package meim
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"sync"
 
@@ -46,7 +47,7 @@ type Channel struct {
 }
 
 func (c *Channel) String() string {
-
+	return fmt.Sprintf("mid: %d,cid: %s,key %s, addr: %s", c.Mid, c.CID, c.Key, c.conn.RemoteAddr().String())
 }
 
 // NewChannel 创建一个通道
@@ -102,7 +103,7 @@ func (c *Channel) Push(p *protocol.Proto) (err error) {
 	select {
 	case c.signal <- p:
 	default:
-		log.Warnf("signal channel is full")
+		log.Warnf("signal channel is full: %s", c.String())
 	}
 	return
 }

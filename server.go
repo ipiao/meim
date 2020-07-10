@@ -2,9 +2,11 @@ package meim
 
 import (
 	"math/rand"
+	"sync"
 	"time"
 
 	"github.com/ipiao/meim/conf"
+	"github.com/ipiao/meim/libs/netutil"
 	xtime "github.com/ipiao/meim/libs/time"
 	"github.com/ipiao/meim/libs/utils"
 	"github.com/ipiao/meim/log"
@@ -12,30 +14,45 @@ import (
 )
 
 type Server struct {
-	c         *conf.Config
-	round     *Round    // accept round store
-	buckets   []*Bucket // subkey bucket
-	bucketIdx uint32
-	serverID  string
-	unid      *utils.UniqueId
+	c          *conf.Config
+	wg         sync.WaitGroup // wait for all channel close when server closed
+	backoff    netutil.BackOff
+	round      *Round    // accept round store
+	buckets    []*Bucket // subkey bucket
+	bucketSize uint32
+	serverID   string
+	unid       *utils.UniqueId
+	closed     chan struct{}
 }
 
 // NewServer returns a new Server.
 func NewServer(c *conf.Config) *Server {
 	s := &Server{
-		c:     c,
-		round: NewRound(*c.Round),
+		c:      c,
+		round:  NewRound(*c.Round),
+		closed: make(chan struct{}),
+		backoff: &netutil.BackOffConfig{
+			MaxDelay:  time.Second * 10,
+			BaseDelay: time.Millisecond * 100,
+			Factor:    1.2,
+			Jitter:    0.6,
+		},
 	}
 	// init bucket
 	s.buckets = make([]*Bucket, c.Bucket.Size)
-	s.bucketIdx = uint32(c.Bucket.Size)
+	s.bucketSize = uint32(c.Bucket.Size)
 	for i := 0; i < c.Bucket.Size; i++ {
 		s.buckets[i] = NewBucket(c.Bucket)
 	}
 	s.serverID = c.ServerID
-	s.unid = utils.NewUniqueId(1000, 1<<31-1)
-	go s.onlineproc()
+	s.unid = utils.NewUniqueId(1000, 1<<24-1)
 	return s
+}
+
+// 开始运行服务
+func (s *Server) Run() {
+	go s.onlineproc()
+	InitNetListeners(s)
 }
 
 // Buckets return all buckets.
@@ -45,7 +62,7 @@ func (s *Server) Buckets() []*Bucket {
 
 // Bucket get the bucket by subkey.
 func (s *Server) Bucket(subKey string) *Bucket {
-	idx := cityhash.CityHash32([]byte(subKey), uint32(len(subKey))) % s.bucketIdx
+	idx := cityhash.CityHash32([]byte(subKey), uint32(len(subKey))) % s.bucketSize
 	if s.c.Debug {
 		log.Infof("%s hit channel bucket index: %d use cityhash", subKey, idx)
 	}
@@ -60,6 +77,13 @@ func (s *Server) RandServerHeartbeat() time.Duration {
 
 // Close close the server.
 func (s *Server) Close() (err error) {
+	close(s.closed)
+	for _, bucket := range s.buckets {
+		for _, ch := range bucket.chs {
+			ch.Close() // 主动关闭掉所有的连接
+		}
+	}
+	s.wg.Wait()
 	return
 }
 
@@ -76,7 +100,7 @@ func (s *Server) onlineproc() {
 				roomCount[roomID] += count
 			}
 		}
-		if allRoomsCount, err = RenewOnlineCount(); err != nil {
+		if allRoomsCount, err = Handler.RenewOnlineCount(); err != nil {
 			time.Sleep(time.Second * 3)
 			continue
 		}

@@ -40,12 +40,29 @@ func InitNetListeners(server *Server) (err error) {
 // acceptNetListener 接收连接并进行事先处理
 func acceptNetListener(server *Server, network *conf.Network, lis net.Listener) {
 	var (
-		conn net.Conn
-		err  error
+		conn    net.Conn
+		err     error
+		retries int
 	)
 	for {
+
+		select {
+		case <-server.closed:
+			_ = lis.Close()
+			return
+		default:
+		}
+
 		if conn, err = lis.Accept(); err != nil {
 			// if listener close then return
+			retries = 0
+			if ne, ok := err.(net.Error); ok && ne.Temporary() {
+				delay := server.backoff.BackOff(retries)
+				retries++
+				log.Warnf("listener.Accept(\"%s\") error(%v)\nretrying in %s", lis.Addr().String(), err, delay)
+				time.Sleep(delay)
+				continue
+			}
 			log.Errorf("listener.Accept(\"%s\") error(%v)", lis.Addr().String(), err)
 			return
 		}
@@ -90,7 +107,7 @@ func (s *Server) ServeChannel(ch *Channel) (err error) {
 	if err = s.handshakeChannel(ch); err != nil {
 		return
 	}
-
+	s.wg.Add(1)
 	// 握手成功后的执行流程
 	var (
 		// timer
@@ -104,22 +121,25 @@ func (s *Server) ServeChannel(ch *Channel) (err error) {
 	// 处理读
 	for {
 		if p, err = ch.CliProto.Set(); err != nil {
+			log.Warnf("channel ring set failed: %s", ch)
 			break
 		}
 		if p, err = protocol.ReadFrom(rr); err != nil {
+			// 处理非连接错误
+			if _, ok := err.(net.Error); ok || err == io.EOF {
+				log.Debugf("channel read proto failed: %s", ch)
+			} else {
+				log.Errorf("channel read proto failed: %s", ch)
+			}
+			log.Warnf("channel read proto failed: %s,\n %s", ch, p)
 			break
 		}
-		if err = HandleProto(ch, p); err != nil {
+		if err = Handler.HandleProto(ch, p); err != nil {
+			log.Warnf("channel handle proto failed: %s,\n %s", ch, p)
 			break
 		}
 		ch.CliProto.SetAdv()
 		ch.Signal()
-	}
-	// 处理非连接错误
-	if _, ok := err.(net.Error); ok || err == io.EOF {
-		log.Debugf("key: %s server tcp failed error(%v)", ch.Key, err)
-	} else {
-		log.Errorf("key: %s server tcp failed error(%v)", ch.Key, err)
 	}
 
 	s.round.Reader(ch.CID).Put(ch.rb) // 读线程显示归还读资源
@@ -134,13 +154,12 @@ func (s *Server) dispatchChannel(ch *Channel) {
 		finish bool
 		wr     = &ch.Writer
 	)
-	log.Debugf("key: %s start dispatch tcp goroutine", ch.Key)
+	log.Debugf("channel: %s, start dispatch tcp goroutine", ch.String())
 	for {
 		var p = ch.Ready()
-		log.Infof("key:%s dispatch msg:%v", ch.Key, *p)
 		switch p {
 		case SignalFinish:
-			log.Debugf("key: %s wakeup exit dispatch goroutine", ch.Key)
+			log.Debugf("channel: %s, wakeup exit dispatch goroutine", ch)
 			finish = true
 			goto failed
 		case SignalReady:
@@ -149,6 +168,7 @@ func (s *Server) dispatchChannel(ch *Channel) {
 				if p, err = ch.CliProto.Get(); err != nil {
 					break
 				}
+				log.Debugf("channel %s write back response %s", ch, p)
 				if err = protocol.WriteTo(wr, p); err != nil {
 					goto failed
 				}
@@ -157,10 +177,10 @@ func (s *Server) dispatchChannel(ch *Channel) {
 			}
 		default:
 			// server send
+			log.Debugf("channel: %s, sent a message %s", ch, p)
 			if err = protocol.WriteTo(wr, p); err != nil {
 				goto failed
 			}
-			log.Debugf("tcp sent a message key:%s mid:%d proto:%+v", ch.Key, ch.Mid, p)
 		}
 		// 直接刷缓存
 		if err = wr.Flush(); err != nil {
@@ -169,11 +189,11 @@ func (s *Server) dispatchChannel(ch *Channel) {
 	}
 failed:
 	if err != nil {
-		log.Errorf("key: %s dispatch tcp error(%v)", ch.Key, err)
+		log.Errorf("channel: %s dispatch tcp error(%v)", ch, err)
 	}
 
 	// 在实际结束前，处理一些任务
-	HandleClosed(ch)
+	Handler.HandleClosed(ch)
 
 	// 一般是客户端主动断开，所以是先读退出，然后处理写退出，所以在写线程做最后的关闭处理
 	s.Bucket(ch.Key).Del(ch) //
@@ -184,6 +204,7 @@ failed:
 	for !finish {
 		finish = ch.Ready() == SignalFinish
 	}
+	s.wg.Done()
 	log.Infof("key: %s dispatch goroutine exit", ch.Key)
 }
 
@@ -203,7 +224,7 @@ func (s *Server) handshakeChannel(ch *Channel) (err error) {
 	step := 0
 	trd = tr.Add(time.Duration(s.c.Protocol.HandshakeTimeout), func() {
 		_ = ch.conn.Close()
-		log.Errorf("key: %s remoteIP: %s step: %d tcp handshake timeout", ch.Key, ch.conn.RemoteAddr().String(), step)
+		log.Errorf("channel %s handshake timeout: %d", ch, step)
 	})
 
 	// must not setadv, only used in auth
@@ -217,15 +238,14 @@ func (s *Server) handshakeChannel(ch *Channel) (err error) {
 			if p.Op == protocol.OpAuth {
 				break
 			} else {
-				log.Warnf("tcp request operation(%d) not auth", p.Op)
+				log.Warnf("channel %s request operation(%d) not auth", ch, p.Op)
 			}
 		}
 		var rid string
 		var accepts []int32
-		if ch.Mid, ch.Key, rid, accepts, _, err = HandleAuth(ch, p); err == nil {
+		if ch.Mid, ch.Key, rid, accepts, _, err = Handler.HandleAuth(ch, p); err == nil {
 			ch.Watch(accepts...)
 			err = s.Bucket(ch.Key).Put(rid, ch)
-			log.Infof("tcp connected key:%s mid:%d proto:%+v", ch.Key, ch.Mid, p)
 		}
 	}
 

@@ -3,6 +3,8 @@ package meim
 import (
 	"time"
 
+	"github.com/ipiao/meim/log"
+
 	"github.com/ipiao/meim/protocol"
 )
 
@@ -21,15 +23,20 @@ type DefaultHandler struct {
 }
 
 func (h *DefaultHandler) RenewOnlineCount() (map[string]int32, error) {
+	log.Info("=====RenewOnlineCount=====")
 	return nil, nil
 }
-func (h *DefaultHandler) HandleAuth(*Channel, *protocol.Proto) (mid int64, key, rid string, accepts []int32, hb time.Duration, err error) {
+func (h *DefaultHandler) HandleAuth(ch *Channel, p *protocol.Proto) (mid int64, key, rid string, accepts []int32, hb time.Duration, err error) {
+	log.Infof("=====HandleAuth=====, channel: %s, proto:", ch, p)
+
 	return
 }
-func (h *DefaultHandler) HandleProto(*Channel, *protocol.Proto) error {
+func (h *DefaultHandler) HandleProto(ch *Channel, p *protocol.Proto) error {
+	log.Infof("=====HandleProto=====, channel: %s, proto:", ch, p)
 	return nil
 }
-func (h *DefaultHandler) HandleClosed(*Channel) {
+func (h *DefaultHandler) HandleClosed(ch *Channel) {
+	log.Infof("=====HandleClosed=====, channel: %s", ch)
 	return
 }
 
